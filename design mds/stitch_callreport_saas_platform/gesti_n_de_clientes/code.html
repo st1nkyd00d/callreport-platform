@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CallReport - Empresas cliente</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-variant": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#213145",
+                      "surface-tint": "#4355b9",
+                      "secondary-container": "#6cf8bb",
+                      "surface-dim": "#cbdbf5",
+                      "primary-fixed-dim": "#bac3ff",
+                      "inverse-primary": "#bac3ff",
+                      "on-primary-fixed-variant": "#293ca0",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-tertiary-container": "#ffc988",
+                      "primary-fixed": "#dee0ff",
+                      "background": "#f8f9ff",
+                      "on-secondary-fixed": "#002113",
+                      "on-secondary": "#ffffff",
+                      "surface-container-highest": "#d3e4fe",
+                      "outline-variant": "#c5c5d4",
+                      "secondary": "#006c49",
+                      "on-secondary-container": "#00714d",
+                      "surface-container-low": "#eff4ff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-surface-variant": "#454652",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#0b1c30",
+                      "outline": "#757684",
+                      "primary": "#24389c",
+                      "on-primary-fixed": "#00105c",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-primary-container": "#cacfff",
+                      "tertiary": "#603b00",
+                      "on-primary": "#ffffff",
+                      "surface": "#f8f9ff",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-surface": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "tertiary-container": "#805000",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#e5eeff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#2a1700",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#3f51b5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "base": "4px",
+                      "md": "16px",
+                      "sidebar-width": "260px",
+                      "sm": "8px",
+                      "container-max": "1440px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F8FAFC; /* Level 0 Background */
+        }
+        .nav-item-active {
+            background-color: #EEF2FF;
+            border-left-width: 3px;
+            border-left-color: #24389c; /* primary */
+        }
+        .status-pill-green {
+            background-color: rgba(0, 108, 73, 0.1);
+            color: #006c49;
+        }
+        .status-pill-gray {
+            background-color: rgba(69, 70, 82, 0.1);
+            color: #454652;
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md text-on-surface h-screen overflow-hidden flex">
+<!-- Left Sidebar (Desktop) -->
+<aside class="hidden md:flex flex-col w-sidebar-width bg-surface-container-lowest border-r border-outline-variant h-full shrink-0">
+<div class="h-16 flex items-center px-md border-b border-outline-variant">
+<span class="font-headline-md text-headline-md text-primary">CallReport</span>
+</div>
+<nav class="flex-1 py-md flex flex-col gap-sm overflow-y-auto">
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm nav-item-active text-primary font-bold" href="#">
+<span class="material-symbols-outlined" data-icon="business">business</span>
+<span class="font-label-md text-label-md">Clientes</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-label-md text-label-md">Usuarios</span>
+</a>
+<a class="flex items-center gap-sm px-md py-sm text-on-surface-variant hover:bg-surface-container-low transition-colors" href="#">
+<span class="material-symbols-outlined" data-icon="history_toggle_off">history_toggle_off</span>
+<span class="font-label-md text-label-md">Llamadas</span>
+</a>
+</nav>
+<div class="p-md border-t border-outline-variant">
+<a class="flex items-center gap-sm text-on-surface-variant hover:bg-surface-container-low transition-colors p-sm rounded" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-label-md text-label-md">Configuración</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col h-full overflow-hidden relative">
+<!-- Header -->
+<header class="h-16 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-xl shrink-0">
+<h1 class="font-headline-lg text-headline-lg">Empresas cliente</h1>
+</header>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-xl">
+<!-- Top Actions -->
+<div class="flex items-center justify-between mb-lg">
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md text-body-md text-on-surface placeholder-on-surface-variant" placeholder="Buscar empresa..." type="text"/>
+</div>
+<button class="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined" data-icon="add" style="font-size: 20px;">add</span>
+                    + Nueva empresa
+                </button>
+</div>
+<!-- Data Table Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-outline-variant">
+<tr>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Empresa</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Estado</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Campañas</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Usuarios</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Reportes este mes</th>
+<th class="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors h-12">
+<td class="px-4 py-2 font-body-md text-body-md font-semibold text-on-surface">Acme Corp</td>
+<td class="px-4 py-2"><span class="status-pill-green px-2 py-1 rounded font-label-sm text-label-sm">Activa</span></td>
+<td class="px-4 py-2 font-body-md text-body-md">12</td>
+<td class="px-4 py-2 font-body-md text-body-md">45</td>
+<td class="px-4 py-2 font-body-md text-body-md">1,204</td>
+<td class="px-4 py-2 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors h-12 bg-surface">
+<td class="px-4 py-2 font-body-md text-body-md font-semibold text-on-surface">Globex Inc</td>
+<td class="px-4 py-2"><span class="status-pill-green px-2 py-1 rounded font-label-sm text-label-sm">Activa</span></td>
+<td class="px-4 py-2 font-body-md text-body-md">8</td>
+<td class="px-4 py-2 font-body-md text-body-md">22</td>
+<td class="px-4 py-2 font-body-md text-body-md">850</td>
+<td class="px-4 py-2 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors h-12">
+<td class="px-4 py-2 font-body-md text-body-md font-semibold text-on-surface">Initech</td>
+<td class="px-4 py-2"><span class="status-pill-gray px-2 py-1 rounded font-label-sm text-label-sm">Suspendida</span></td>
+<td class="px-4 py-2 font-body-md text-body-md">0</td>
+<td class="px-4 py-2 font-body-md text-body-md">5</td>
+<td class="px-4 py-2 font-body-md text-body-md">0</td>
+<td class="px-4 py-2 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Slide-over Overlay -->
+<div class="absolute inset-0 bg-on-surface/20 z-40 transition-opacity"></div>
+<!-- Slide-over Panel -->
+<div class="absolute inset-y-0 right-0 w-96 bg-surface-container-lowest shadow-lg z-50 border-l border-outline-variant flex flex-col transform transition-transform duration-300">
+<div class="p-lg border-b border-outline-variant flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Nueva empresa</h2>
+<button class="text-on-surface-variant hover:bg-surface-container-low p-1 rounded transition-colors">
+<span class="material-symbols-outlined" data-icon="close">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-lg space-y-lg">
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface">Nombre de la empresa</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md text-body-md text-on-surface" placeholder="Ej. Stark Industries" type="text"/>
+</div>
+<div class="flex flex-col gap-2">
+<label class="font-label-md text-label-md text-on-surface">Ventana de edición (minutos)</label>
+<input class="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all font-body-md text-body-md text-on-surface" type="number" value="30"/>
+</div>
+<div class="flex items-center justify-between pt-sm">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">Activa</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Permitir acceso a la plataforma</span>
+</div>
+<!-- Toggle switch -->
+<button class="relative inline-flex h-6 w-11 items-center rounded-full bg-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<span class="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-on-primary transition-transform"></span>
+</button>
+</div>
+</div>
+<div class="p-lg border-t border-outline-variant bg-surface-container-low flex justify-end gap-md">
+<button class="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm hover:bg-surface-container hover:text-on-surface transition-colors">
+                    Cancelar
+                </button>
+<button class="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors">
+                    Guardar
+                </button>
+</div>
+</div>
+</main>
+</body></html>

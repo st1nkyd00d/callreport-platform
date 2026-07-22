@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CallReport - Configuración de Campaña</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-variant": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#213145",
+                      "surface-tint": "#4355b9",
+                      "secondary-container": "#6cf8bb",
+                      "surface-dim": "#cbdbf5",
+                      "primary-fixed-dim": "#bac3ff",
+                      "inverse-primary": "#bac3ff",
+                      "on-primary-fixed-variant": "#293ca0",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-tertiary-container": "#ffc988",
+                      "primary-fixed": "#dee0ff",
+                      "background": "#f8f9ff",
+                      "on-secondary-fixed": "#002113",
+                      "on-secondary": "#ffffff",
+                      "surface-container-highest": "#d3e4fe",
+                      "outline-variant": "#c5c5d4",
+                      "secondary": "#006c49",
+                      "on-secondary-container": "#00714d",
+                      "surface-container-low": "#eff4ff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-surface-variant": "#454652",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#0b1c30",
+                      "outline": "#757684",
+                      "primary": "#24389c",
+                      "on-primary-fixed": "#00105c",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-primary-container": "#cacfff",
+                      "tertiary": "#603b00",
+                      "on-primary": "#ffffff",
+                      "surface": "#f8f9ff",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-surface": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "tertiary-container": "#805000",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#e5eeff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#2a1700",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#3f51b5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "base": "4px",
+                      "md": "16px",
+                      "sidebar-width": "260px",
+                      "sm": "8px",
+                      "container-max": "1440px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .material-symbols-outlined {
+                font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            }
+            .material-symbols-outlined.fill {
+                font-variation-settings: 'FILL' 1;
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-hidden">
+<!-- TopAppBar JSON - Mobile View -->
+<header class="md:hidden sticky top-0 w-full z-50 flex items-center px-md py-sm bg-surface border-b border-outline-variant flat no shadows">
+<button class="text-primary hover:bg-surface-container-low transition-colors p-sm rounded-full mr-sm flex items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<span class="font-headline-md text-headline-md text-primary">CallReport</span>
+</header>
+<div class="flex h-[calc(100vh-64px)] md:h-screen w-full relative">
+<!-- Desktop Sidebar -->
+<aside class="hidden md:flex flex-col w-sidebar-width bg-surface-container-lowest border-r border-outline-variant flex-shrink-0 z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+<div class="px-xl py-lg">
+<span class="font-headline-md text-headline-md text-primary tracking-tight">CallReport</span>
+</div>
+<nav class="flex-1 px-md space-y-sm mt-sm">
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined mr-md text-outline">grid_view</span>
+                    Dashboard
+                </a>
+<a class="flex items-center px-md py-sm bg-surface-container-low border-l-4 border-primary text-primary font-label-md text-label-md rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined mr-md fill">campaign</span>
+                    Campañas
+                </a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined mr-md text-outline">history_toggle_off</span>
+                    Seguimientos
+                </a>
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined mr-md text-outline">person</span>
+                    Agentes
+                </a>
+</nav>
+<div class="p-md border-t border-outline-variant mt-auto">
+<a class="flex items-center px-md py-sm text-on-surface-variant hover:bg-surface-container-low font-label-md text-label-md rounded-r-lg transition-colors" href="#">
+<span class="material-symbols-outlined mr-md text-outline">settings</span>
+                    Configuración
+                </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col h-full overflow-hidden bg-background">
+<div class="flex-1 overflow-y-auto">
+<div class="max-w-[1080px] mx-auto p-md md:p-xl space-y-xl">
+<!-- Breadcrumbs -->
+<nav class="flex items-center text-on-surface-variant font-body-sm text-body-sm space-x-xs">
+<a class="hover:text-primary transition-colors" href="#">Campañas</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Acme Corp</a>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="font-label-sm text-on-surface">Ventas Q3</span>
+</nav>
+<!-- Page Header & Actions -->
+<header class="flex flex-col md:flex-row md:items-start md:justify-between gap-md">
+<div class="space-y-sm">
+<div class="flex items-center gap-sm">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background">Ventas Q3</h1>
+<span class="inline-flex items-center px-sm py-xs bg-surface-container text-on-surface-variant rounded-full font-label-sm text-label-sm border border-outline-variant/30">
+<span class="material-symbols-outlined text-[14px] mr-xs">domain</span>
+                                    Acme Corp
+                                </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+                                Configuración de tipificaciones y reglas de seguimiento para la campaña de ventas de cierre de trimestre.
+                            </p>
+</div>
+<!-- Status Toggle -->
+<div class="flex items-center gap-sm bg-surface-container-lowest p-sm rounded-lg border border-outline-variant shadow-sm h-fit">
+<span class="font-label-md text-label-md text-on-background">Estado de campaña</span>
+<label class="relative inline-flex items-center cursor-pointer ml-sm">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
+<span class="ml-sm font-label-sm text-label-sm text-secondary">Activa</span>
+</label>
+</div>
+</header>
+<!-- Tabs -->
+<div class="border-b border-outline-variant">
+<nav aria-label="Tabs" class="flex space-x-lg">
+<button class="border-primary text-primary border-b-2 py-sm px-xs font-label-md text-label-md whitespace-nowrap">
+                                Tipificaciones
+                            </button>
+<button class="border-transparent text-on-surface-variant hover:text-on-surface hover:border-outline py-sm px-xs font-label-md text-label-md whitespace-nowrap transition-colors">
+                                Agentes asignados
+                            </button>
+</nav>
+</div>
+<!-- Tipificaciones Content -->
+<section class="space-y-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-sm text-headline-sm text-on-background">Reglas de Tipificación</h2>
+<button class="flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:bg-primary-fixed-variant transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                                Agregar tipificación
+                            </button>
+</div>
+<!-- Data List (Sortable Simulation) -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
+<!-- List Header -->
+<div class="hidden md:grid grid-cols-[48px_1fr_200px_120px_80px] gap-md px-md py-sm bg-surface-container-low border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase">
+<div></div>
+<div>Etiqueta de Resultado</div>
+<div>Regla de Seguimiento</div>
+<div>Estado</div>
+<div class="text-center">Acción</div>
+</div>
+<!-- Rows -->
+<div class="divide-y divide-outline-variant/50">
+<!-- Row 1 -->
+<div class="group flex flex-col md:grid md:grid-cols-[48px_1fr_200px_120px_80px] gap-sm md:gap-md items-start md:items-center p-md md:p-sm hover:bg-surface-bright transition-colors bg-surface-container-lowest">
+<div class="hidden md:flex justify-center text-outline cursor-grab hover:text-on-surface-variant active:cursor-grabbing">
+<span class="material-symbols-outlined">drag_indicator</span>
+</div>
+<div class="flex items-center gap-sm font-label-md text-label-md text-on-background">
+<span class="md:hidden material-symbols-outlined text-outline">drag_indicator</span>
+                                        Venta Completada
+                                    </div>
+<div>
+<span class="inline-flex items-center px-sm py-xs bg-secondary/10 text-secondary rounded-full font-label-sm text-label-sm">
+                                            Sin seguimiento
+                                        </span>
+</div>
+<div class="flex items-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex justify-end md:justify-center w-full md:w-auto mt-sm md:mt-0">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-xs rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="group flex flex-col md:grid md:grid-cols-[48px_1fr_200px_120px_80px] gap-sm md:gap-md items-start md:items-center p-md md:p-sm hover:bg-surface-bright transition-colors bg-surface-container-lowest">
+<div class="hidden md:flex justify-center text-outline cursor-grab hover:text-on-surface-variant">
+<span class="material-symbols-outlined">drag_indicator</span>
+</div>
+<div class="flex items-center gap-sm font-label-md text-label-md text-on-background">
+<span class="md:hidden material-symbols-outlined text-outline">drag_indicator</span>
+                                        Seguimiento Pendiente
+                                    </div>
+<div class="flex items-center gap-xs">
+<span class="inline-flex items-center px-sm py-xs bg-[#FFF3E0] text-[#E65100] rounded-full font-label-sm text-label-sm border border-[#FFE0B2]">
+                                            Requiere seguimiento
+                                        </span>
+</div>
+<div class="flex items-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex justify-end md:justify-center w-full md:w-auto mt-sm md:mt-0">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-xs rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="group flex flex-col md:grid md:grid-cols-[48px_1fr_200px_120px_80px] gap-sm md:gap-md items-start md:items-center p-md md:p-sm hover:bg-surface-bright transition-colors bg-surface-container-lowest opacity-75">
+<div class="hidden md:flex justify-center text-outline cursor-grab hover:text-on-surface-variant">
+<span class="material-symbols-outlined">drag_indicator</span>
+</div>
+<div class="flex items-center gap-sm font-label-md text-label-md text-on-background">
+<span class="md:hidden material-symbols-outlined text-outline">drag_indicator</span>
+                                        No Interesado
+                                    </div>
+<div>
+<span class="inline-flex items-center px-sm py-xs bg-surface-container text-on-surface-variant rounded-full font-label-sm text-label-sm">
+                                            Cerrar ticket
+                                        </span>
+</div>
+<div class="flex items-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex justify-end md:justify-center w-full md:w-auto mt-sm md:mt-0">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-xs rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="group flex flex-col md:grid md:grid-cols-[48px_1fr_200px_120px_80px] gap-sm md:gap-md items-start md:items-center p-md md:p-sm hover:bg-surface-bright transition-colors bg-surface-container-lowest">
+<div class="hidden md:flex justify-center text-outline cursor-grab hover:text-on-surface-variant">
+<span class="material-symbols-outlined">drag_indicator</span>
+</div>
+<div class="flex items-center gap-sm font-label-md text-label-md text-on-background">
+<span class="md:hidden material-symbols-outlined text-outline">drag_indicator</span>
+                                        Consulta Resuelta
+                                    </div>
+<div>
+<span class="inline-flex items-center px-sm py-xs bg-secondary/10 text-secondary rounded-full font-label-sm text-label-sm">
+                                            Sin seguimiento
+                                        </span>
+</div>
+<div class="flex items-center">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="flex justify-end md:justify-center w-full md:w-auto mt-sm md:mt-0">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-xs rounded hover:bg-surface-container-low">
+<span class="material-symbols-outlined text-[20px]">edit</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+<!-- BottomNavBar JSON - Mobile View (Matches 4 destinations JSON) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center px-md pb-xs pt-xs bg-surface-container-lowest border-t border-outline-variant shadow-sm rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 w-16 py-1 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">grid_view</span>
+<span class="font-label-sm text-[10px] mt-xs tracking-tight">Dashboard</span>
+</a>
+<!-- Using "Seguimientos" slot to map to active Campañas semantic intent as requested by prompt for the view, but JSON says Dashboard, Seguimientos, Exportar, Perfil.  
+             Since it's a deep sub-page, according to "Automatic Suppression", maybe it shouldn't be here, but we will render it as per JSON and highlight Seguimientos for now, or Dashboard. 
+             Actually, JSON exact match required: -->
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 hover:bg-surface-variant/50 transition-transform duration-200 active:scale-95" href="#">
+<span class="material-symbols-outlined text-[24px] fill">history_toggle_off</span>
+<span class="font-label-sm text-[10px] mt-xs tracking-tight">Seguimientos</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 w-16 py-1 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">download</span>
+<span class="font-label-sm text-[10px] mt-xs tracking-tight">Exportar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 w-16 py-1 rounded-lg transition-colors" href="#">
+<span class="material-symbols-outlined text-[24px]">person</span>
+<span class="font-label-sm text-[10px] mt-xs tracking-tight">Perfil</span>
+</a>
+</nav>
+</body></html>

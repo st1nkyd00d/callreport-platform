@@ -1,0 +1,200 @@
+// Prisma schema — Fase 1 (ver plan.md raíz).
+// Convención: columnas y tablas en snake_case en Postgres vía @map/@@map,
+// campos camelCase en el cliente TS (coincide con packages/shared/src/types.ts).
+// Las políticas RLS (prisma/migrations/*_enable_rls/migration.sql) son SQL
+// crudo escrito a mano y asumen estos nombres de columna/tabla exactos.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  super_admin
+  supervisor
+  agent
+  client_user
+
+  @@map("role")
+}
+
+enum TenantStatus {
+  active
+  suspended
+
+  @@map("tenant_status")
+}
+
+enum UserStatus {
+  active
+  inactive
+  blocked
+
+  @@map("user_status")
+}
+
+enum CampaignStatus {
+  active
+  paused
+
+  @@map("campaign_status")
+}
+
+model Tenant {
+  id                String       @id @default(uuid())
+  name              String
+  status            TenantStatus @default(active)
+  editWindowMinutes Int          @default(30) @map("edit_window_minutes")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  memberships TenantMembership[]
+  campaigns   Campaign[]
+  callReports CallReport[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  email        String     @unique
+  passwordHash String     @map("password_hash")
+  fullName     String     @map("full_name")
+  role         Role
+  status       UserStatus @default(active)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  tenantMemberships   TenantMembership[]
+  campaignAssignments CampaignAgent[]
+  callReportsAsAgent  CallReport[]       @relation("CallReportAgent")
+  resolvedFollowups   CallReport[]       @relation("CallReportFollowupResolver")
+  auditLogs           AuditLog[]
+  pushTokens          PushToken[]
+
+  @@map("users")
+}
+
+model TenantMembership {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tenantId  String   @map("tenant_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@map("tenant_memberships")
+}
+
+model Campaign {
+  id        String         @id @default(uuid())
+  tenantId  String         @map("tenant_id")
+  name      String
+  status    CampaignStatus @default(active)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  agents       CampaignAgent[]
+  dispositions Disposition[]
+  callReports  CallReport[]
+
+  @@index([tenantId])
+  @@map("campaigns")
+}
+
+model CampaignAgent {
+  id         String   @id @default(uuid())
+  campaignId String   @map("campaign_id")
+  userId     String   @map("user_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, userId])
+  @@map("campaign_agents")
+}
+
+model Disposition {
+  id               String  @id @default(uuid())
+  campaignId       String  @map("campaign_id")
+  label            String
+  sortOrder        Int     @default(0) @map("sort_order")
+  requiresFollowup Boolean @default(false) @map("requires_followup")
+  isActive         Boolean @default(true) @map("is_active")
+
+  campaign    Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  callReports CallReport[]
+
+  @@index([campaignId])
+  @@map("dispositions")
+}
+
+model CallReport {
+  id                 String    @id @default(uuid())
+  tenantId           String    @map("tenant_id")
+  campaignId         String    @map("campaign_id")
+  agentId            String    @map("agent_id")
+  dispositionId      String    @map("disposition_id")
+  contactName        String    @map("contact_name")
+  contactPhone       String    @map("contact_phone")
+  contactEmail       String?   @map("contact_email")
+  notes              String?
+  followupResolvedAt DateTime? @map("followup_resolved_at")
+  followupResolvedBy String?   @map("followup_resolved_by")
+  durationSeconds    Int?      @map("duration_seconds")
+  externalCallId     String?   @map("external_call_id")
+  recordingUrl       String?   @map("recording_url")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  tenant           Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  campaign         Campaign    @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  agent            User        @relation("CallReportAgent", fields: [agentId], references: [id])
+  disposition      Disposition @relation(fields: [dispositionId], references: [id])
+  followupResolver User?       @relation("CallReportFollowupResolver", fields: [followupResolvedBy], references: [id])
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, dispositionId])
+  @@index([agentId, createdAt])
+  @@map("call_reports")
+}
+
+// Inmutable por diseño: sin updatedAt, y REVOKE UPDATE/DELETE para
+// app_user en la migración RLS (ver 01-roles.sql + enable_rls).
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  diff       Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId, createdAt])
+  @@map("audit_logs")
+}
+
+model PushToken {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  token      String    @unique
+  platform   String
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
+}

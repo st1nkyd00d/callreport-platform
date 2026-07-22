@@ -1,0 +1,13 @@
+{
+  "name": "callreport-platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:admin-web": "npm run dev --workspace apps/admin-web",
+    "dev:api": "npm run start:dev --workspace apps/api",
+    "dev:mobile": "npm run start --workspace apps/mobile"
+  }
+}

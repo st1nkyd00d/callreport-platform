@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mis reportes - CallReport</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-variant": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#213145",
+                      "surface-tint": "#4355b9",
+                      "secondary-container": "#6cf8bb",
+                      "surface-dim": "#cbdbf5",
+                      "primary-fixed-dim": "#bac3ff",
+                      "inverse-primary": "#bac3ff",
+                      "on-primary-fixed-variant": "#293ca0",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-tertiary-container": "#ffc988",
+                      "primary-fixed": "#dee0ff",
+                      "background": "#f8f9ff",
+                      "on-secondary-fixed": "#002113",
+                      "on-secondary": "#ffffff",
+                      "surface-container-highest": "#d3e4fe",
+                      "outline-variant": "#c5c5d4",
+                      "secondary": "#006c49",
+                      "on-secondary-container": "#00714d",
+                      "surface-container-low": "#eff4ff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-surface-variant": "#454652",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#0b1c30",
+                      "outline": "#757684",
+                      "primary": "#24389c",
+                      "on-primary-fixed": "#00105c",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-primary-container": "#cacfff",
+                      "tertiary": "#603b00",
+                      "on-primary": "#ffffff",
+                      "surface": "#f8f9ff",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-surface": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "tertiary-container": "#805000",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#e5eeff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#2a1700",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#3f51b5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "base": "4px",
+                      "md": "16px",
+                      "sidebar-width": "260px",
+                      "sm": "8px",
+                      "container-max": "1440px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "body-md": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-lg": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "headline-sm": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["12px", {"lineHeight": "16px", "fontWeight": "400"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+              }
+            }
+          }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-[80px]">
+<!-- TopAppBar (from JSON) -->
+<header class="bg-surface dark:bg-surface-dim docked full-width top-0 border-b border-outline-variant dark:border-outline flat no shadows sticky top-0 w-full z-50 flex items-center px-md py-sm">
+<button class="mr-sm text-primary dark:text-primary-fixed hover:bg-surface-container-low transition-colors rounded-full p-2">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm-mobile text-primary dark:text-primary-fixed flex-1">CallReport</h1>
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant flex-shrink-0">
+<img alt="User avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdc2KeusjBOF1oiuCb7Y86Ym7kgtrafsjNmsaHc9cNAc8_4j3J9qaoYxzmle8YAvQJe4N2V3AbBCBXznU3vRPIz41YFNvh1t6JUpGra5jnzAdwAUhb6raR0O1h9k7b4h2nPNI13MMNx5A_F3-kW9XjdL4DrJGRSzEjqXoiX3Z6H282XYEJuk_lyoHC6gYNwz0XgLtfYxNgKSi0x279KFo9p3jNyjVLQ-Co1b9It_lr792V5WomBGLK"/>
+</div>
+</header>
+<main class="px-md py-lg max-w-container-max mx-auto md:w-full md:px-xl">
+<!-- Header & Segmented Control -->
+<div class="mb-lg">
+<h2 class="font-headline-md text-headline-md mb-md text-on-background">Mis reportes</h2>
+<div class="flex bg-surface-container-high rounded-lg p-1 w-full max-w-sm mx-auto md:mx-0">
+<button class="flex-1 py-2 text-center rounded-md bg-surface-container-lowest text-primary shadow-sm font-label-md text-label-md">Hoy</button>
+<button class="flex-1 py-2 text-center rounded-md text-on-surface-variant hover:bg-surface-container-highest transition-colors font-label-md text-label-md">Esta semana</button>
+</div>
+</div>
+<!-- Summary Row -->
+<div class="flex gap-sm mb-lg overflow-x-auto pb-2 scrollbar-hide">
+<div class="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px] text-primary">description</span>
+<span class="font-label-md text-label-md text-on-background">18 reportes</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-2 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px] text-tertiary-container">history_toggle_off</span>
+<span class="font-label-md text-label-md text-on-background">3 seguimientos</span>
+</div>
+</div>
+<!-- List of Report Cards -->
+<div class="flex flex-col gap-md">
+<!-- Card 1: Editable, Completada -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-sm shadow-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-secondary"></div>
+<div class="flex justify-between items-start pl-xs">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 14:32 - Hoy
+                        </p>
+<h3 class="font-label-md text-label-md text-on-background">Juan Carlos Silva</h3>
+<p class="font-body-sm text-body-sm text-outline mt-1">ID: CR-8923</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded bg-secondary/10 text-secondary font-label-sm text-label-sm border border-secondary/20">Venta Completada</span>
+<span class="text-[10px] text-outline font-semibold uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded">Renovaciones</span>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant w-full my-1"></div>
+<div class="flex justify-between items-center pl-xs">
+<span class="font-body-sm text-body-sm text-tertiary-container flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 23 min restantes
+                    </span>
+<button class="font-label-md text-label-md text-primary bg-surface-container-low hover:bg-surface-container transition-colors px-4 py-1.5 rounded border border-primary/20 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">edit</span> Editar
+                    </button>
+</div>
+</div>
+<!-- Card 2: Editable, Pendiente -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-sm shadow-sm relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-tertiary-container"></div>
+<div class="flex justify-between items-start pl-xs">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 13:15 - Hoy
+                        </p>
+<h3 class="font-label-md text-label-md text-on-background">María Fernanda G.</h3>
+<p class="font-body-sm text-body-sm text-outline mt-1">ID: CR-8922</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded bg-tertiary-container/10 text-tertiary-container font-label-sm text-label-sm border border-tertiary-container/20">Seguimiento Pendiente</span>
+<span class="text-[10px] text-outline font-semibold uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded">Up-sell Plan Base</span>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant w-full my-1"></div>
+<div class="flex justify-between items-center pl-xs">
+<span class="font-body-sm text-body-sm text-tertiary-container flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 12 min restantes
+                    </span>
+<button class="font-label-md text-label-md text-primary bg-surface-container-low hover:bg-surface-container transition-colors px-4 py-1.5 rounded border border-primary/20 flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">edit</span> Editar
+                    </button>
+</div>
+</div>
+<!-- Card 3: Locked, No Interesado -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-sm shadow-sm relative overflow-hidden opacity-80 bg-surface-bright">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-outline"></div>
+<div class="flex justify-between items-start pl-xs">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 09:45 - Hoy
+                        </p>
+<h3 class="font-label-md text-label-md text-on-background">Roberto Sánchez</h3>
+<p class="font-body-sm text-body-sm text-outline mt-1">ID: CR-8910</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded bg-outline/10 text-on-surface-variant font-label-sm text-label-sm border border-outline/20">No Interesado</span>
+<span class="text-[10px] text-outline font-semibold uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded">Adquisición Fría</span>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant w-full my-1"></div>
+<div class="flex justify-between items-center pl-xs">
+<span class="font-body-sm text-body-sm text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock</span> Solo supervisor
+                    </span>
+<button class="font-label-md text-label-md text-outline bg-transparent px-4 py-1.5 rounded border border-outline-variant flex items-center gap-1 cursor-not-allowed" disabled="">
+                        Ver detalle
+                    </button>
+</div>
+</div>
+<!-- Card 4: Locked, Completada -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-sm shadow-sm relative overflow-hidden opacity-80 bg-surface-bright">
+<div class="absolute left-0 top-0 bottom-0 w-[4px] bg-secondary"></div>
+<div class="flex justify-between items-start pl-xs">
+<div>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span> 08:30 - Hoy
+                        </p>
+<h3 class="font-label-md text-label-md text-on-background">Elena Rojas</h3>
+<p class="font-body-sm text-body-sm text-outline mt-1">ID: CR-8902</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<span class="px-2 py-1 rounded bg-secondary/10 text-secondary font-label-sm text-label-sm border border-secondary/20">Venta Completada</span>
+<span class="text-[10px] text-outline font-semibold uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded">Renovaciones</span>
+</div>
+</div>
+<div class="h-[1px] bg-outline-variant w-full my-1"></div>
+<div class="flex justify-between items-center pl-xs">
+<span class="font-body-sm text-body-sm text-outline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">lock</span> Solo supervisor
+                    </span>
+<button class="font-label-md text-label-md text-outline bg-transparent px-4 py-1.5 rounded border border-outline-variant flex items-center gap-1 cursor-not-allowed" disabled="">
+                        Ver detalle
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (from JSON) -->
+<!-- Applying destination count 4 logic since it covers "Mis reportes" equivalent (Seguimientos/Dashboard etc from the 4-item list context, though the prompt asked for "Mis reportes". Will use the 3-item list from JSON which explicitly has "Mis reportes") -->
+<nav class="bg-surface-container-lowest dark:bg-inverse-surface docked full-width bottom-0 rounded-t-xl bg-surface-container-lowest dark:bg-inverse-surface border-t border-outline-variant shadow-sm fixed bottom-0 w-full z-50 flex justify-around items-center px-md pb-xs pt-xs md:hidden">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors w-16 h-14">
+<span class="material-symbols-outlined mb-1">edit</span>
+<span class="font-label-sm text-label-sm">Reportar</span>
+</button>
+<!-- Active state -->
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 scale-95 transition-transform duration-200 h-14 min-w-[80px]">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">list_alt</span>
+<span class="font-label-sm text-label-sm">Mis reportes</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-variant/50 transition-colors w-16 h-14">
+<span class="material-symbols-outlined mb-1">person</span>
+<span class="font-label-sm text-label-sm">Perfil</span>
+</button>
+</nav>
+<style>
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

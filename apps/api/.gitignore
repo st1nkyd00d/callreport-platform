@@ -1,0 +1,46 @@
+# compiled output
+/dist
+/node_modules
+/build
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+
+# Tests
+/coverage
+/.nyc_output
+
+# IDEs and editors
+/.idea
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+
+# Prisma
+/generated/prisma
+
+# Skills que `prisma init` instala para agentes de IA (prisma/skills en
+# GitHub, ver skills-lock.json). En Windows, sin core.symlinks, git
+# materializa estos symlinks como copias reales y los triplica entre
+# .claude/.agents/.windsurf -- se regeneran con `prisma init`, no hace
+# falta versionarlos. skills-lock.json sí queda versionado.
+/.claude/skills
+/.agents/skills
+/.windsurf/skills
+
+# Environment variables
+.env
+
+*.tsbuildinfo

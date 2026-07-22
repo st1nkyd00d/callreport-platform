@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: callreport
+      POSTGRES_PASSWORD: callreport
+      POSTGRES_DB: callreport
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./apps/api/prisma/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U callreport"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    environment:
+      # Hostname "postgres" = red interna de docker-compose (reemplaza el
+      # "localhost" de apps/api/.env, que es para uso desde el host).
+      DATABASE_URL: postgresql://migrator:migrator_dev_pw@postgres:5432/callreport?schema=public
+      APP_DATABASE_URL: postgresql://app_user:app_user_dev_pw@postgres:5432/callreport?schema=public
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # apps/admin-web (build estático via nginx) se agrega en Fase 3.
+
+volumes:
+  postgres_data:

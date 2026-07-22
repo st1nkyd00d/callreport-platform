@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CallReport - Detalle del reporte</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-fixed": "#6ffbbe",
+                      "surface-container-high": "#dce9ff",
+                      "inverse-on-surface": "#eaf1ff",
+                      "surface-variant": "#d3e4fe",
+                      "on-tertiary": "#ffffff",
+                      "inverse-surface": "#213145",
+                      "surface-tint": "#4355b9",
+                      "secondary-container": "#6cf8bb",
+                      "surface-dim": "#cbdbf5",
+                      "primary-fixed-dim": "#bac3ff",
+                      "inverse-primary": "#bac3ff",
+                      "on-primary-fixed-variant": "#293ca0",
+                      "tertiary-fixed-dim": "#ffb95f",
+                      "on-tertiary-container": "#ffc988",
+                      "primary-fixed": "#dee0ff",
+                      "background": "#f8f9ff",
+                      "on-secondary-fixed": "#002113",
+                      "on-secondary": "#ffffff",
+                      "surface-container-highest": "#d3e4fe",
+                      "outline-variant": "#c5c5d4",
+                      "secondary": "#006c49",
+                      "on-secondary-container": "#00714d",
+                      "surface-container-low": "#eff4ff",
+                      "on-tertiary-fixed-variant": "#653e00",
+                      "on-surface-variant": "#454652",
+                      "on-error": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-background": "#0b1c30",
+                      "outline": "#757684",
+                      "primary": "#24389c",
+                      "on-primary-fixed": "#00105c",
+                      "tertiary-fixed": "#ffddb8",
+                      "on-primary-container": "#cacfff",
+                      "tertiary": "#603b00",
+                      "on-primary": "#ffffff",
+                      "surface": "#f8f9ff",
+                      "secondary-fixed-dim": "#4edea3",
+                      "on-surface": "#0b1c30",
+                      "surface-bright": "#f8f9ff",
+                      "tertiary-container": "#805000",
+                      "on-error-container": "#93000a",
+                      "surface-container": "#e5eeff",
+                      "on-secondary-fixed-variant": "#005236",
+                      "error": "#ba1a1a",
+                      "on-tertiary-fixed": "#2a1700",
+                      "error-container": "#ffdad6",
+                      "primary-container": "#3f51b5"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "base": "4px",
+                      "md": "16px",
+                      "sidebar-width": "260px",
+                      "sm": "8px",
+                      "container-max": "1440px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "headline-lg": [
+                              "Inter"
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "headline-sm": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-full font-body-md overflow-x-hidden">
+<!-- TopAppBar (Transactional - Hidden Navigation Shell on Mobile) -->
+<header class="sticky top-0 w-full z-50 flex items-center px-md py-sm bg-surface text-primary border-b border-outline-variant flat no shadows">
+<button aria-label="Volver" class="flex items-center justify-center p-sm rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant mr-sm">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-sm text-headline-sm flex-1 text-on-surface">Detalle del reporte</h1>
+<button aria-label="Opciones" class="flex items-center justify-center p-sm rounded-full hover:bg-surface-container-low transition-colors text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</header>
+<main class="p-md space-y-md pb-24">
+<!-- Contact Card -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md shadow-sm">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-sm">Contacto</h2>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-headline-sm text-headline-sm">
+                        MG
+                    </div>
+<div>
+<h3 class="font-label-md text-label-md text-on-surface">María González</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Cliente Premium</p>
+</div>
+</div>
+<div class="flex gap-sm">
+<a aria-label="Llamar" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-colors" href="tel:+1234567890">
+<span class="material-symbols-outlined" data-icon="call">call</span>
+</a>
+<a aria-label="Enviar correo" class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary hover:bg-primary hover:text-on-primary transition-colors" href="mailto:maria@example.com">
+<span class="material-symbols-outlined" data-icon="mail">mail</span>
+</a>
+</div>
+</div>
+</section>
+<!-- Call Details Card -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md shadow-sm">
+<div class="flex justify-between items-start mb-md">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase">Detalles de la llamada</h2>
+<!-- Status Pill: Pendiente (Amber) -->
+<div class="bg-tertiary-container/10 text-tertiary-container border border-tertiary-container/20 px-2 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule" data-weight="fill" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<span class="font-label-sm text-[10px] uppercase">Seguimiento Pendiente</span>
+</div>
+</div>
+<div class="space-y-sm">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface mb-xs">Ventas Q3</h3>
+<div class="flex items-center gap-xs text-on-surface-variant font-body-sm text-body-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="calendar_today">calendar_today</span>
+<span>18 jul 2026, 14:32</span>
+</div>
+</div>
+<div class="pt-sm border-t border-outline-variant/50 flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Atendió:</span>
+<div class="flex items-center gap-xs">
+<div class="w-6 h-6 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant font-label-sm text-[10px]">
+                            CR
+                        </div>
+<span class="font-label-md text-label-md text-on-surface">Carlos R.</span>
+</div>
+</div>
+<div class="flex justify-between items-center">
+<span class="font-body-sm text-body-sm text-on-surface-variant">Duración:</span>
+<span class="font-label-md text-label-md text-on-surface">14m 23s</span>
+</div>
+</div>
+</section>
+<!-- Notes Card -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-md shadow-sm">
+<h2 class="font-label-sm text-label-sm text-on-surface-variant uppercase mb-sm">Notas de la llamada</h2>
+<div class="bg-surface-container-low p-sm rounded-lg">
+<p class="font-body-md text-body-md text-on-surface">
+                    El cliente solicita información detallada sobre las proyecciones del Q3. Se requiere enviarle el reporte consolidado antes del viernes. Mostró interés en renovar el contrato anual si se mantienen las condiciones actuales.
+                </p>
+</div>
+</section>
+</main>
+<!-- Bottom Action Area -->
+<div class="fixed bottom-0 left-0 w-full p-md bg-surface border-t border-outline-variant shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40">
+<button class="w-full bg-tertiary-container hover:bg-tertiary text-on-tertiary-container font-label-md text-label-md py-sm px-md rounded-full flex items-center justify-center gap-sm transition-colors shadow-sm">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+            Marcar seguimiento como resuelto
+        </button>
+</div>
+</body></html>
