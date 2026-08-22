@@ -17,7 +17,8 @@ Un call center ofrece el servicio de contestar llamadas para otras empresas ("cl
 | Panel admin | React + Vite + TypeScript, TanStack Query, Recharts |
 | Push | Desde v1, vía Expo Notifications (FCM/APNs), `expo-server-sdk` en backend |
 | Telefonía | Manual siempre por ahora; el esquema deja campos opcionales (`duration_seconds`, `external_call_id`, `recording_url`) |
-| Escala | Pequeña (<20 agentes); hosting indefinido (sin Docker por ahora — PostgreSQL y servicios corren directo en el host; se reevaluará Docker Compose para despliegue en Fase 8) |
+| Base de datos | Neon (PostgreSQL administrado, serverless) — sin instancia local ni contenedor propio |
+| Escala | Pequeña (<20 agentes); hosting de api/admin-web indefinido, sin Docker por ahora (se reevaluará Docker Compose solo para esos servicios en Fase 8; la base sigue en Neon) |
 | Alcance v1 | Núcleo + métricas de agentes + cola de seguimientos + multi-usuario por tenant |
 
 ### Estructura del monorepo
@@ -44,14 +45,14 @@ Ricardo App/
 
 **Objetivo:** infraestructura completa de desarrollo y un esquema de datos con aislamiento multi-tenant funcionando a nivel de base de datos, antes de escribir lógica de negocio.
 
-**Prerequisitos:** ninguno (fase inicial). Requiere Node 20+, PostgreSQL 16 (instalado localmente) y Git instalados.
+**Prerequisitos:** ninguno (fase inicial). Requiere Node 20+, una base Neon (PostgreSQL administrado) y Git instalados.
 
 ### Tareas
 
 1. **Monorepo**: inicializar repo git y workspace de npm (`package.json` raíz con `workspaces: ["apps/*", "packages/*"]`). Crear `packages/shared` con `src/types.ts` (roles, DTOs base) y `src/constants.ts`.
-2. **PostgreSQL local**: instancia de PostgreSQL 16 corriendo en el host (sin Docker por ahora), base `callreport` en el puerto 5432.
-3. **Scaffold del API**: `nest new apps/api`. Instalar Prisma, configurar `DATABASE_URL` vía `.env` (crear `.env.example` documentado).
-4. **Roles de PostgreSQL** (crítico para RLS): script `apps/api/prisma/init/01-roles.sql`, corrido a mano vía `psql` contra la base local, que crea:
+2. **Base de datos Neon**: proyecto Neon con la base `neondb`; endpoint directo para migraciones y endpoint pooled (PgBouncer) para runtime — sin instancia local ni contenedor propio.
+3. **Scaffold del API**: `nest new apps/api`. Instalar Prisma, configurar `DATABASE_URL`/`APP_DATABASE_URL` vía `.env` (crear `.env.example` documentado).
+4. **Roles de PostgreSQL** (crítico para RLS): script `apps/api/prisma/init/01-roles.sql`, corrido a mano vía `psql` contra Neon, que crea:
    - `app_user` — rol **no-superusuario** con el que se conecta NestJS (los superusuarios ignoran RLS).
    - `migrator` — rol dueño de las tablas, usado solo por `prisma migrate`.
 5. **Esquema Prisma completo** (`apps/api/prisma/schema.prisma`):
@@ -76,7 +77,7 @@ Ricardo App/
 
 ### Criterios de aceptación (verificar antes de Fase 2)
 
-- [ ] PostgreSQL local sano; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
+- [ ] Base Neon accesible; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
 - [ ] **Prueba SQL de RLS**: conectado como `app_user`, tras `SELECT set_config('app.tenant_id', '<uuid-acme>', false); set_config('app.role','client_user',false);`, un `SELECT * FROM call_reports` (sin WHERE) devuelve **solo** filas de Acme. Cambiando el setting a Globex, solo Globex. Sin settings, **cero filas**.
 - [ ] Como `app_user`, `UPDATE audit_logs ...` y `DELETE FROM audit_logs` fallan con error de permisos.
 - [ ] `npx expo start` en `apps/mobile` abre la app placeholder en Expo Go.

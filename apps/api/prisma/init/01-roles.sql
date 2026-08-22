@@ -1,13 +1,13 @@
 -- apps/api/prisma/init/01-roles.sql
 --
--- Correr UNA sola vez, a mano, contra el PostgreSQL local (16+) usado
--- para desarrollo, como superusuario (p.ej. `psql -U postgres -d
--- callreport -f apps/api/prisma/init/01-roles.sql`). No se ejecuta
--- automáticamente -- no hay contenedor Docker que lo dispare por ahora
--- (ver git log si vuelve a agregarse docker-compose.yml en el futuro).
+-- Corrido UNA sola vez, a mano, contra la base Neon del proyecto, como
+-- rol con privilegios suficientes (p.ej. `psql "<connection-string>" -f
+-- apps/api/prisma/init/01-roles.sql`). No se ejecuta automáticamente --
+-- no hay contenedor Docker que lo dispare (Neon es un servicio
+-- administrado, no una instancia propia).
 --
--- Si aparece "role app_user does not exist" es porque este script
--- todavía no corrió contra la base local.
+-- Si aparece "role app_user does not exist" en una base Neon nueva
+-- (otro proyecto/branch), hace falta correr este script ahí primero.
 --
 -- Crea los dos roles no-superusuario de los que depende el resto de la
 -- Fase 1:
