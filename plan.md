@@ -77,10 +77,10 @@ Ricardo App/
 
 ### Criterios de aceptación (verificar antes de Fase 2)
 
-- [ ] Base Neon accesible; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
-- [ ] **Prueba SQL de RLS**: conectado como `app_user`, tras `SELECT set_config('app.tenant_id', '<uuid-acme>', false); set_config('app.role','client_user',false);`, un `SELECT * FROM call_reports` (sin WHERE) devuelve **solo** filas de Acme. Cambiando el setting a Globex, solo Globex. Sin settings, **cero filas**.
-- [ ] Como `app_user`, `UPDATE audit_logs ...` y `DELETE FROM audit_logs` fallan con error de permisos.
-- [ ] `npx expo start` en `apps/mobile` abre la app placeholder en Expo Go.
+- [x] Base Neon accesible; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
+- [x] **Prueba SQL de RLS**: conectado como `app_user`, tras `SELECT set_config('app.tenant_id', '<uuid-acme>', false); set_config('app.role','client_user',false);`, un `SELECT * FROM call_reports` (sin WHERE) devuelve **solo** filas de Acme. Cambiando el setting a Globex, solo Globex. Sin settings, **cero filas**.
+- [x] Como `app_user`, `UPDATE audit_logs ...` y `DELETE FROM audit_logs` fallan con error de permisos.
+- [x] `npx expo start` en `apps/mobile` abre la app placeholder en Expo Go. (Verificado headless: el server levanta sin crashear y sirve el bundle real vía HTTP; falta una pasada manual en un dispositivo/Expo Go físico — ver `PROGRESS.md`.)
 
 ---
 

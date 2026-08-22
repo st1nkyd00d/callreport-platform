@@ -5,6 +5,9 @@
     "apps/*",
     "packages/*"
   ],
+  "dependencies": {
+    "expo-router": "~57.0.7"
+  },
   "scripts": {
     "dev:admin-web": "npm run dev --workspace apps/admin-web",
     "dev:api": "npm run start:dev --workspace apps/api",
