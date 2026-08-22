@@ -1,9 +1,10 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../../../components/Icon';
+import { Pill } from '../../../components/Pill';
 import { MobileTopBar } from '../../../components/MobileTopBar';
 import { useStore } from '../../../store/AppStore';
-import { dispositionById, isPendingFollowup, userById } from '../../../lib/selectors';
-import { formatDateLong, formatTime, initials } from '../../../lib/format';
+import { dispositionById, dispositionPillVariant, isPendingFollowup, userById } from '../../../lib/selectors';
+import { formatAppointment, formatDateLong, formatTime, initials } from '../../../lib/format';
 
 export function DetalleReportePage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,7 @@ export function DetalleReportePage() {
   const campaign = state.campaigns.find((c) => c.id === report.campaignId);
   const agent = userById(state, report.agentId);
   const pending = isPendingFollowup(state, report);
+  const variant = dispositionPillVariant(disposition?.color);
 
   return (
     <div className="h-full flex flex-col relative">
@@ -57,10 +59,9 @@ export function DetalleReportePage() {
         <section className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md shadow-sm">
           <div className="flex justify-between items-start mb-md">
             <h2 className="font-label-sm text-label-sm text-on-surface-variant uppercase">Detalles de la llamada</h2>
-            <div className={`px-2 py-1 rounded-full flex items-center gap-1 border ${pending ? 'bg-tertiary-container/10 text-tertiary-container border-tertiary-container/20' : 'bg-secondary/10 text-secondary border-secondary/20'}`}>
-              <Icon name={pending ? 'schedule' : 'check_circle'} filled className="text-[14px]" />
-              <span className="font-label-sm text-[10px] uppercase">{disposition?.label}</span>
-            </div>
+            <Pill variant={variant}>
+              <Icon name={disposition?.icon ?? 'label'} filled className="text-[14px]" /> {disposition?.label}
+            </Pill>
           </div>
           <div className="space-y-sm">
             <div>
@@ -77,10 +78,24 @@ export function DetalleReportePage() {
                 <span className="font-label-md text-label-md text-on-surface">{agent?.fullName ?? 'Agente'}</span>
               </div>
             </div>
-            {report.durationSeconds && (
+            {report.durationSeconds != null && (
               <div className="flex justify-between items-center">
                 <span className="font-body-sm text-body-sm text-on-surface-variant">Duración:</span>
                 <span className="font-label-md text-label-md text-on-surface">{Math.floor(report.durationSeconds / 60)}m {report.durationSeconds % 60}s</span>
+              </div>
+            )}
+            {report.scheduledAt && (
+              <div className="flex justify-between items-center">
+                <span className="font-body-sm text-body-sm text-on-surface-variant">Cita agendada:</span>
+                <span className="font-label-md text-label-md text-teal-700 flex items-center gap-1">
+                  <Icon name="event_available" className="text-[16px]" /> {formatAppointment(report.scheduledAt)}
+                </span>
+              </div>
+            )}
+            {report.detailText && (
+              <div className="flex justify-between items-start gap-sm">
+                <span className="font-body-sm text-body-sm text-on-surface-variant shrink-0">Detalle:</span>
+                <span className="font-label-md text-label-md text-purple-700 text-right">{report.detailText}</span>
               </div>
             )}
           </div>

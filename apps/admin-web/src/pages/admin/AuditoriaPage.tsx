@@ -12,6 +12,8 @@ const actionLabel: Record<AuditAction, string> = {
   resolve_followup: 'Resolución',
   suspend: 'Suspensión',
   delete: 'Eliminación',
+  clock_in: 'Inicio de turno',
+  clock_out: 'Fin de turno',
 };
 const actionVariant: Record<AuditAction, PillVariant> = {
   create: 'success',
@@ -19,6 +21,8 @@ const actionVariant: Record<AuditAction, PillVariant> = {
   resolve_followup: 'primary',
   suspend: 'neutral',
   delete: 'error',
+  clock_in: 'teal',
+  clock_out: 'neutral',
 };
 
 export function AuditoriaPage() {

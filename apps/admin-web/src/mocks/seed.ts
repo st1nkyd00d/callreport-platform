@@ -1,4 +1,5 @@
-import type { AuditLog, CallReport, Campaign, Disposition, Tenant, User } from '@callreport/shared';
+import type { AuditLog, CallReport, Campaign, DispositionCode, Disposition, Shift, Tenant, User } from '@callreport/shared';
+import { DEFAULT_DISPOSITIONS } from '@callreport/shared';
 
 // PRNG determinista para que el volumen de datos históricos sea estable entre recargas.
 function mulberry32(seed: number) {
@@ -14,12 +15,14 @@ function mulberry32(seed: number) {
 const rand = mulberry32(20260718);
 const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
 const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
+const hoursAgo = (h: number) => new Date(Date.now() - h * 3600_000).toISOString();
 const daysAgo = (d: number, hh: number, mm: number) => {
   const dt = new Date();
   dt.setDate(dt.getDate() - d);
   dt.setHours(hh, mm, 0, 0);
   return dt.toISOString();
 };
+const daysFromNow = (d: number, hh: number, mm: number) => daysAgo(-d, hh, mm);
 
 export const tenants: Tenant[] = [
   { id: 't-acme', name: 'Acme Corp', status: 'active', editWindowMinutes: 30, createdAt: daysAgo(210, 9, 0) },
@@ -47,13 +50,22 @@ export const campaigns: Campaign[] = [
   { id: 'c-globex-nuevos', tenantId: 't-globex', name: 'Nuevos Clientes', status: 'active', agentIds: ['u-agent-maria', 'u-agent-elena'] },
 ];
 
+// Fuente única del set de tipificaciones: DEFAULT_DISPOSITIONS en
+// packages/shared/src/constants.ts.
 function defaultDispositions(campaignId: string): Disposition[] {
-  return [
-    { id: `d-${campaignId}-venta`, campaignId, label: 'Venta Completada', sortOrder: 0, requiresFollowup: false, isActive: true, icon: 'check_circle', color: 'success' },
-    { id: `d-${campaignId}-consulta`, campaignId, label: 'Consulta Resuelta', sortOrder: 1, requiresFollowup: false, isActive: true, icon: 'support_agent', color: 'primary' },
-    { id: `d-${campaignId}-pendiente`, campaignId, label: 'Seguimiento Pendiente', sortOrder: 2, requiresFollowup: true, isActive: true, icon: 'schedule', color: 'warning' },
-    { id: `d-${campaignId}-no-interesado`, campaignId, label: 'No Interesado', sortOrder: 3, requiresFollowup: false, isActive: true, icon: 'do_not_disturb', color: 'neutral' },
-  ];
+  return DEFAULT_DISPOSITIONS.map((d, i) => ({
+    id: `d-${campaignId}-${d.code}`,
+    campaignId,
+    label: d.label,
+    code: d.code,
+    sortOrder: i,
+    requiresFollowup: d.requiresFollowup,
+    requiresDetail: d.requiresDetail,
+    requiresSchedule: d.requiresSchedule,
+    isActive: true,
+    icon: d.icon,
+    color: d.color,
+  }));
 }
 
 export const dispositions: Disposition[] = campaigns.flatMap((c) => defaultDispositions(c.id));
@@ -73,14 +85,22 @@ const notesPool = [
   'Reclamo por facturación duplicada, escalado a soporte técnico.',
   'Cliente pidió más tiempo para evaluar la propuesta comercial.',
 ];
+const detailPool = [
+  'Solicita hablar con un gerente.',
+  'Pregunta sobre una promoción vista en redes sociales.',
+  'Consulta general sobre el catálogo de productos.',
+  'Pidió que se le contacte en otro horario.',
+  'Reportó un problema con el sitio web.',
+];
 
 function makeReport(params: {
-  id: string; campaign: Campaign; dispositionSlug: 'venta' | 'consulta' | 'pendiente' | 'no-interesado';
+  id: string; campaign: Campaign; dispositionSlug: DispositionCode;
   agentId: string; contactName: string; createdAt: string; resolved?: boolean;
+  shiftId?: string; scheduledAt?: string; detailText?: string;
 }): CallReport {
-  const { id, campaign, dispositionSlug, agentId, contactName, createdAt, resolved } = params;
+  const { id, campaign, dispositionSlug, agentId, contactName, createdAt, resolved, shiftId, scheduledAt, detailText } = params;
   const dispositionId = `d-${campaign.id}-${dispositionSlug}`;
-  const isFollowup = dispositionSlug === 'pendiente';
+  const isFollowup = DEFAULT_DISPOSITIONS.find((d) => d.code === dispositionSlug)?.requiresFollowup ?? false;
   return {
     id,
     tenantId: campaign.tenantId,
@@ -96,51 +116,126 @@ function makeReport(params: {
     followupResolvedAt: isFollowup && resolved ? minutesAgo(Math.floor(rand() * 500)) : undefined,
     followupResolvedBy: isFollowup && resolved ? 'u-sup-laura' : undefined,
     durationSeconds: 60 + Math.floor(rand() * 800),
+    shiftId,
+    scheduledAt,
+    detailText,
   };
 }
+
+// ---------------------------------------------------------------------
+// Turnos (clock in/out): ~20 turnos cerrados de 6-9h por agente en los
+// últimos 30 días + un turno abierto ahora mismo para Maria y Ana, para
+// que el prototipo arranque con estado mixto "en turno" / "fuera de
+// turno" y demuestre el bloqueo de reportes sin turno para el resto.
+// ---------------------------------------------------------------------
+interface SeedShift {
+  id: string;
+  userId: string;
+  startedAt: string;
+  endedAt: string | undefined;
+}
+
+const agentIds = ['u-agent-maria', 'u-agent-ana', 'u-agent-elena', 'u-agent-carlos', 'u-agent-luis'];
+const shiftsByAgent = new Map<string, SeedShift[]>();
+let shiftSeq = 1;
+for (const agentId of agentIds) {
+  const agentShifts: SeedShift[] = [];
+  for (let day = 29; day >= 1; day--) {
+    if (rand() > 0.72) continue; // día libre
+    const startHour = 8 + Math.floor(rand() * 3);
+    const startMinute = Math.floor(rand() * 60);
+    const durationHours = 6 + rand() * 3;
+    const startedAtDate = new Date(daysAgo(day, startHour, startMinute));
+    const endedAtDate = new Date(startedAtDate.getTime() + durationHours * 3600_000);
+    agentShifts.push({ id: `sh-${shiftSeq++}`, userId: agentId, startedAt: startedAtDate.toISOString(), endedAt: endedAtDate.toISOString() });
+  }
+  agentShifts.sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime());
+  shiftsByAgent.set(agentId, agentShifts);
+}
+
+// Turnos abiertos "ahora" (no forman parte del stream determinista, usan
+// el reloj real como el resto de los datos "de hoy" de este archivo).
+const openShiftMaria: SeedShift = { id: 'sh-open-maria', userId: 'u-agent-maria', startedAt: hoursAgo(3), endedAt: undefined };
+const openShiftAna: SeedShift = { id: 'sh-open-ana', userId: 'u-agent-ana', startedAt: hoursAgo(2), endedAt: undefined };
+shiftsByAgent.get('u-agent-maria')!.push(openShiftMaria);
+shiftsByAgent.get('u-agent-ana')!.push(openShiftAna);
+
+export const shifts: Shift[] = Array.from(shiftsByAgent.values()).flat();
 
 const acmeVentas = campaigns[0];
 
 // Reportes "de hoy" del agente demo (Maria Garcia) para que Nuevo Reporte / Mis Reportes
-// arranquen con contenido vivo y ventanas de edición reales.
+// arranquen con contenido vivo y ventanas de edición reales. Todos cuelgan del turno
+// abierto de Maria (openShiftMaria).
 export const handcraftedTodayReports: CallReport[] = [
-  makeReport({ id: 'CR-8923', campaign: acmeVentas, dispositionSlug: 'venta', agentId: 'u-agent-maria', contactName: 'Juan Carlos Silva', createdAt: minutesAgo(7) }),
-  makeReport({ id: 'CR-8922', campaign: acmeVentas, dispositionSlug: 'pendiente', agentId: 'u-agent-maria', contactName: 'María Fernanda G.', createdAt: minutesAgo(18) }),
-  makeReport({ id: 'CR-8910', campaign: acmeVentas, dispositionSlug: 'no-interesado', agentId: 'u-agent-maria', contactName: 'Roberto Sánchez', createdAt: minutesAgo(52) }),
-  makeReport({ id: 'CR-8902', campaign: acmeVentas, dispositionSlug: 'venta', agentId: 'u-agent-maria', contactName: 'Elena Rojas', createdAt: minutesAgo(70) }),
+  makeReport({ id: 'CR-8923', campaign: acmeVentas, dispositionSlug: 'venta', agentId: 'u-agent-maria', contactName: 'Juan Carlos Silva', createdAt: minutesAgo(7), shiftId: openShiftMaria.id }),
+  makeReport({ id: 'CR-8922', campaign: acmeVentas, dispositionSlug: 'seguimiento', agentId: 'u-agent-maria', contactName: 'María Fernanda G.', createdAt: minutesAgo(18), shiftId: openShiftMaria.id }),
+  makeReport({ id: 'CR-8910', campaign: acmeVentas, dispositionSlug: 'no_interesado', agentId: 'u-agent-maria', contactName: 'Roberto Sánchez', createdAt: minutesAgo(52), shiftId: openShiftMaria.id }),
+  makeReport({ id: 'CR-8902', campaign: acmeVentas, dispositionSlug: 'venta', agentId: 'u-agent-maria', contactName: 'Elena Rojas', createdAt: minutesAgo(70), shiftId: openShiftMaria.id }),
+  makeReport({ id: 'CR-8930', campaign: acmeVentas, dispositionSlug: 'cita', agentId: 'u-agent-maria', contactName: 'Sofía Herrera', createdAt: minutesAgo(3), shiftId: openShiftMaria.id, scheduledAt: daysFromNow(2, 15, 0) }),
+  makeReport({ id: 'CR-8929', campaign: acmeVentas, dispositionSlug: 'otro', agentId: 'u-agent-maria', contactName: 'Diego Ramírez', createdAt: minutesAgo(35), shiftId: openShiftMaria.id, detailText: 'Solicita hablar con un gerente.' }),
 ];
 
-const dispositionSlugs: Array<'venta' | 'consulta' | 'pendiente' | 'no-interesado'> = ['venta', 'consulta', 'pendiente', 'no-interesado'];
-const weightedSlug = () => {
+const weightedSlug = (): DispositionCode => {
   const r = rand();
-  if (r < 0.35) return 'venta';
-  if (r < 0.65) return 'consulta';
-  if (r < 0.85) return 'pendiente';
-  return 'no-interesado';
+  if (r < 0.2) return 'venta';
+  if (r < 0.3) return 'cita';
+  if (r < 0.5) return 'consulta';
+  if (r < 0.6) return 'mensaje';
+  if (r < 0.75) return 'seguimiento';
+  if (r < 0.85) return 'reclamo';
+  if (r < 0.95) return 'no_interesado';
+  return 'otro';
 };
 
-const historicalReports: CallReport[] = [];
-for (let day = 1; day < 30; day++) {
-  const reportsThatDay = 2 + Math.floor(rand() * 6);
-  for (let i = 0; i < reportsThatDay; i++) {
-    const campaign = pick(campaigns);
-    const agentId = pick(campaign.agentIds);
-    const hh = 8 + Math.floor(rand() * 10);
-    const mm = Math.floor(rand() * 60);
-    historicalReports.push(
-      makeReport({
-        id: `CR-h${day}-${i}`,
-        campaign,
-        dispositionSlug: weightedSlug(),
-        agentId,
-        contactName: pick(contactPool),
-        createdAt: daysAgo(day, hh, mm),
-        resolved: rand() > 0.4,
-      }),
-    );
+const campaignsByAgent = new Map<string, Campaign[]>();
+for (const campaign of campaigns) {
+  for (const agentId of campaign.agentIds) {
+    const arr = campaignsByAgent.get(agentId) ?? [];
+    arr.push(campaign);
+    campaignsByAgent.set(agentId, arr);
   }
 }
-void dispositionSlugs;
+
+// Cada reporte histórico cuelga de un turno cerrado real del agente, con
+// created_at cayendo dentro de la ventana de ese turno (mismo enfoque que
+// apps/api/prisma/seed.ts, para que el prototipo y la base real "se
+// sientan" igual).
+const historicalReports: CallReport[] = [];
+let remaining = 200;
+let historySeq = 0;
+for (const agentId of agentIds) {
+  if (remaining <= 0) break;
+  const agentCampaigns = campaignsByAgent.get(agentId) ?? [];
+  if (agentCampaigns.length === 0) continue;
+  const agentShifts = (shiftsByAgent.get(agentId) ?? []).filter((s) => s.endedAt);
+  for (const shift of agentShifts) {
+    if (remaining <= 0) break;
+    const reportsThisShift = Math.min(remaining, 2 + Math.floor(rand() * 4));
+    const shiftStart = new Date(shift.startedAt).getTime();
+    const shiftEnd = new Date(shift.endedAt!).getTime();
+    for (let i = 0; i < reportsThisShift && remaining > 0; i++) {
+      const campaign = pick(agentCampaigns);
+      const dispositionSlug = weightedSlug();
+      const createdAt = new Date(shiftStart + rand() * Math.max(shiftEnd - shiftStart, 60_000)).toISOString();
+      historicalReports.push(
+        makeReport({
+          id: `CR-h${historySeq++}`,
+          campaign,
+          dispositionSlug,
+          agentId,
+          contactName: pick(contactPool),
+          createdAt,
+          resolved: rand() > 0.4,
+          shiftId: shift.id,
+          scheduledAt: dispositionSlug === 'cita' ? daysFromNow(1 + Math.floor(rand() * 13), 9 + Math.floor(rand() * 8), Math.floor(rand() * 60)) : undefined,
+          detailText: dispositionSlug === 'otro' ? pick(detailPool) : undefined,
+        }),
+      );
+      remaining--;
+    }
+  }
+}
 
 export const reports: CallReport[] = [...handcraftedTodayReports, ...historicalReports].sort(
   (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

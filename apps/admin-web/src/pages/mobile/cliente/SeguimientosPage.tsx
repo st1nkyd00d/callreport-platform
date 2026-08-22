@@ -1,20 +1,24 @@
 import { useState } from 'react';
-import { Icon } from '../../../components/Icon';
 import { MobileTopBar } from '../../../components/MobileTopBar';
 import { BottomTabBar } from '../../../components/BottomTabBar';
+import { ReportCard } from '../../../components/ReportCard';
 import { useStore } from '../../../store/AppStore';
+import { clientTabsBase } from '../../../lib/tabs';
 import { dispositionById, isPendingFollowup } from '../../../lib/selectors';
-import { relativeTime } from '../../../lib/format';
+import type { CallReport } from '@callreport/shared';
 
-const clientTabsBase = [
-  { to: '/mobile/cliente/dashboard', label: 'Dashboard', icon: 'grid_view' },
-  { to: '/mobile/cliente/seguimientos', label: 'Seguimientos', icon: 'history_toggle_off' },
-  { to: '/mobile/cliente/exportar', label: 'Exportar', icon: 'download' },
-  { to: '/mobile/perfil', label: 'Perfil', icon: 'person' },
-];
+function sortList(list: CallReport[]): CallReport[] {
+  const withSchedule = list
+    .filter((r) => r.scheduledAt)
+    .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
+  const withoutSchedule = list
+    .filter((r) => !r.scheduledAt)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  return [...withSchedule, ...withoutSchedule];
+}
 
 export function SeguimientosPage() {
-  const { state, currentUser, resolveFollowup } = useStore();
+  const { state, currentUser } = useStore();
   const [tab, setTab] = useState<'pendientes' | 'resueltos'>('pendientes');
 
   const tenant = currentUser?.tenantId ? state.tenants.find((t) => t.id === currentUser.tenantId) : undefined;
@@ -22,7 +26,7 @@ export function SeguimientosPage() {
   const followupReports = tenantReports.filter((r) => dispositionById(state, r.dispositionId)?.requiresFollowup);
   const pending = followupReports.filter((r) => isPendingFollowup(state, r));
   const resolved = followupReports.filter((r) => !isPendingFollowup(state, r));
-  const list = tab === 'pendientes' ? pending : resolved;
+  const list = sortList(tab === 'pendientes' ? pending : resolved);
 
   const clientTabs = clientTabsBase.map((t) => (t.to.includes('seguimientos') ? { ...t, badge: pending.length } : t));
 
@@ -47,36 +51,13 @@ export function SeguimientosPage() {
         </div>
 
         <div className="flex flex-col gap-sm">
-          {list.map((r) => {
-            const campaign = state.campaigns.find((c) => c.id === r.campaignId);
-            return (
-              <div key={r.id} className="bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex items-center justify-between shadow-sm">
-                <div className="flex flex-col gap-xs flex-1">
-                  <div className="flex justify-between items-start w-full">
-                    <span className="font-label-md text-label-md text-on-surface">{r.contactName}</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">{relativeTime(r.createdAt)}</span>
-                  </div>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">{r.contactPhone}</span>
-                  <div className="mt-1">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed-variant font-label-sm text-label-sm">{campaign?.name}</span>
-                  </div>
-                </div>
-                {tab === 'pendientes' ? (
-                  <button
-                    onClick={() => resolveFollowup(r.id)}
-                    className="ml-md w-10 h-10 flex-shrink-0 rounded-full border border-outline-variant flex items-center justify-center text-outline hover:bg-secondary hover:text-on-secondary hover:border-secondary transition-colors"
-                    title="Resolver"
-                  >
-                    <Icon name="check" />
-                  </button>
-                ) : (
-                  <div className="ml-md w-10 h-10 flex-shrink-0 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                    <Icon name="check_circle" filled />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {list.map((r) => (
+            <ReportCard
+              key={r.id}
+              reportId={r.id}
+              overdue={tab === 'pendientes' && !!r.scheduledAt && new Date(r.scheduledAt).getTime() < Date.now()}
+            />
+          ))}
           {list.length === 0 && (
             <p className="text-center font-body-md text-body-md text-on-surface-variant py-xl">
               {tab === 'pendientes' ? 'Sin seguimientos pendientes.' : 'Aún no hay seguimientos resueltos.'}

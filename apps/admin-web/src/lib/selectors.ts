@@ -1,4 +1,4 @@
-import type { CallReport } from '@callreport/shared';
+import type { CallReport, Shift } from '@callreport/shared';
 import type { useStore } from '../store/AppStore';
 
 type AppData = ReturnType<typeof useStore>['state'];
@@ -37,24 +37,55 @@ export function reportsToday(reports: CallReport[]): CallReport[] {
   });
 }
 
-export function dispositionSlug(state: AppData, report: CallReport): 'venta' | 'consulta' | 'pendiente' | 'no-interesado' | undefined {
-  const d = dispositionById(state, report.dispositionId);
-  if (!d) return undefined;
-  if (d.label.includes('Venta')) return 'venta';
-  if (d.label.includes('Consulta')) return 'consulta';
-  if (d.label.includes('Pendiente')) return 'pendiente';
-  return 'no-interesado';
-}
-
-export function dispositionPillVariant(color?: string): 'success' | 'warning' | 'error' | 'neutral' | 'primary' {
+export function dispositionPillVariant(color?: string): 'success' | 'warning' | 'error' | 'neutral' | 'primary' | 'purple' | 'teal' {
   switch (color) {
     case 'success':
-      return 'success';
     case 'warning':
-      return 'warning';
+    case 'error':
     case 'primary':
-      return 'primary';
+    case 'purple':
+    case 'teal':
+      return color;
     default:
       return 'neutral';
   }
+}
+
+// --- Turnos -----------------------------------------------------------
+
+export function shiftsForUser(state: AppData, userId: string): Shift[] {
+  return state.shifts.filter((s) => s.userId === userId);
+}
+
+export function openShiftFor(state: AppData, userId: string): Shift | undefined {
+  return state.shifts.find((s) => s.userId === userId && !s.endedAt);
+}
+
+export function agentsOnShift(state: AppData) {
+  const openUserIds = new Set(state.shifts.filter((s) => !s.endedAt).map((s) => s.userId));
+  return state.users.filter((u) => u.role === 'agent' && openUserIds.has(u.id));
+}
+
+export function reportsInShift(state: AppData, shiftId: string): CallReport[] {
+  return state.reports.filter((r) => r.shiftId === shiftId);
+}
+
+// Horas activas (suma de duración de turnos, contando el turno en curso
+// hasta "ahora") de un usuario desde una fecha ISO dada.
+export function activeHoursFor(state: AppData, userId: string, sinceIso: string): number {
+  const since = new Date(sinceIso).getTime();
+  const now = Date.now();
+  return shiftsForUser(state, userId)
+    .filter((s) => new Date(s.startedAt).getTime() >= since)
+    .reduce((sum, s) => {
+      const end = s.endedAt ? new Date(s.endedAt).getTime() : now;
+      return sum + Math.max(0, end - new Date(s.startedAt).getTime()) / 3_600_000;
+    }, 0);
+}
+
+export function upcomingAppointments(state: AppData, tenantId?: string): CallReport[] {
+  const now = Date.now();
+  return state.reports
+    .filter((r) => (tenantId ? r.tenantId === tenantId : true) && r.scheduledAt && new Date(r.scheduledAt).getTime() >= now)
+    .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime());
 }

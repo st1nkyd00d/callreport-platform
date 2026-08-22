@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useReducer, type ReactNode } from 'react';
-import type { AuditAction, AuditLog, CallReport, Campaign, Disposition, Tenant, User } from '@callreport/shared';
-import { auditLogs as seedAuditLogs, campaigns as seedCampaigns, contactNamePool, dispositions as seedDispositions, randomPhone, reports as seedReports, tenants as seedTenants, users as seedUsers } from '../mocks/seed';
+import type { AuditAction, AuditLog, CallReport, Campaign, Disposition, Shift, Tenant, User } from '@callreport/shared';
+import { DEFAULT_DISPOSITIONS } from '@callreport/shared';
+import { auditLogs as seedAuditLogs, campaigns as seedCampaigns, contactNamePool, dispositions as seedDispositions, randomPhone, reports as seedReports, shifts as seedShifts, tenants as seedTenants, users as seedUsers } from '../mocks/seed';
 
 interface AppState {
   tenants: Tenant[];
@@ -8,6 +9,7 @@ interface AppState {
   campaigns: Campaign[];
   dispositions: Disposition[];
   reports: CallReport[];
+  shifts: Shift[];
   auditLogs: AuditLog[];
   session: {
     userId: string;
@@ -21,6 +23,7 @@ const initialState: AppState = {
   campaigns: seedCampaigns,
   dispositions: seedDispositions,
   reports: seedReports,
+  shifts: seedShifts,
   auditLogs: seedAuditLogs,
   session: {
     userId: 'u-admin',
@@ -43,7 +46,10 @@ type Action =
   | { type: 'MOVE_DISPOSITION'; campaignId: string; id: string; direction: 'up' | 'down' }
   | { type: 'CREATE_REPORT'; report: CallReport; actorId: string }
   | { type: 'UPDATE_REPORT'; id: string; patch: Partial<CallReport>; actorId: string; diff?: AuditLog['diff'] }
-  | { type: 'RESOLVE_FOLLOWUP'; id: string; actorId: string };
+  | { type: 'RESOLVE_FOLLOWUP'; id: string; actorId: string }
+  | { type: 'CLOCK_IN'; shift: Shift; actorId: string }
+  | { type: 'CLOCK_OUT'; userId: string; endedAt: string; actorId: string }
+  | { type: 'FORCE_CLOSE_SHIFT'; shiftId: string; endedAt: string; closedBy: string; actorId: string };
 
 function audit(state: AppState, actorId: string, action: AuditAction, entityType: string, entityId: string, diff?: AuditLog['diff']): AuditLog {
   const actor = state.users.find((u) => u.id === actorId);
@@ -102,10 +108,19 @@ function reducer(state: AppState, action: Action): AppState {
         campaigns: [...state.campaigns, action.campaign],
         dispositions: [
           ...state.dispositions,
-          { id: `d-${action.campaign.id}-venta`, campaignId: action.campaign.id, label: 'Venta Completada', sortOrder: 0, requiresFollowup: false, isActive: true, icon: 'check_circle', color: 'success' },
-          { id: `d-${action.campaign.id}-consulta`, campaignId: action.campaign.id, label: 'Consulta Resuelta', sortOrder: 1, requiresFollowup: false, isActive: true, icon: 'support_agent', color: 'primary' },
-          { id: `d-${action.campaign.id}-pendiente`, campaignId: action.campaign.id, label: 'Seguimiento Pendiente', sortOrder: 2, requiresFollowup: true, isActive: true, icon: 'schedule', color: 'warning' },
-          { id: `d-${action.campaign.id}-no-interesado`, campaignId: action.campaign.id, label: 'No Interesado', sortOrder: 3, requiresFollowup: false, isActive: true, icon: 'do_not_disturb', color: 'neutral' },
+          ...DEFAULT_DISPOSITIONS.map((d, i) => ({
+            id: `d-${action.campaign.id}-${d.code}`,
+            campaignId: action.campaign.id,
+            label: d.label,
+            code: d.code,
+            sortOrder: i,
+            requiresFollowup: d.requiresFollowup,
+            requiresDetail: d.requiresDetail,
+            requiresSchedule: d.requiresSchedule,
+            isActive: true,
+            icon: d.icon,
+            color: d.color,
+          })),
         ],
         auditLogs: [audit(state, action.actorId, 'create', 'Campaign', action.campaign.id), ...state.auditLogs],
       };
@@ -175,6 +190,30 @@ function reducer(state: AppState, action: Action): AppState {
         auditLogs: [audit(state, action.actorId, 'resolve_followup', 'CallReport', action.id), ...state.auditLogs],
       };
 
+    case 'CLOCK_IN': {
+      // No-op si ya hay un turno abierto para este usuario -- espeja el
+      // índice único parcial shifts_one_open_per_user de la base.
+      const alreadyOpen = state.shifts.some((s) => s.userId === action.shift.userId && !s.endedAt);
+      if (alreadyOpen) return state;
+      return {
+        ...state,
+        shifts: [...state.shifts, action.shift],
+        auditLogs: [audit(state, action.actorId, 'clock_in', 'Shift', action.shift.id), ...state.auditLogs],
+      };
+    }
+    case 'CLOCK_OUT':
+      return {
+        ...state,
+        shifts: state.shifts.map((s) => (s.userId === action.userId && !s.endedAt ? { ...s, endedAt: action.endedAt } : s)),
+        auditLogs: [audit(state, action.actorId, 'clock_out', 'Shift', action.userId), ...state.auditLogs],
+      };
+    case 'FORCE_CLOSE_SHIFT':
+      return {
+        ...state,
+        shifts: state.shifts.map((s) => (s.id === action.shiftId ? { ...s, endedAt: action.endedAt, closedBy: action.closedBy } : s)),
+        auditLogs: [audit(state, action.actorId, 'clock_out', 'Shift', action.shiftId), ...state.auditLogs],
+      };
+
     default:
       return state;
   }
@@ -192,13 +231,16 @@ interface StoreApi {
   createCampaign: (data: Omit<Campaign, 'id' | 'agentIds'>) => void;
   updateCampaign: (id: string, patch: Partial<Campaign>) => void;
   toggleCampaignAgent: (campaignId: string, agentId: string) => void;
-  addDisposition: (campaignId: string, data: { label: string; requiresFollowup: boolean }) => void;
+  addDisposition: (campaignId: string, data: { label: string; requiresFollowup: boolean; requiresDetail?: boolean; requiresSchedule?: boolean }) => void;
   updateDisposition: (id: string, patch: Partial<Disposition>) => void;
   moveDisposition: (campaignId: string, id: string, direction: 'up' | 'down') => void;
-  createReport: (data: { campaignId: string; dispositionId: string; contactName: string; contactPhone: string; contactEmail?: string; notes: string }) => CallReport;
+  createReport: (data: { campaignId: string; dispositionId: string; contactName: string; contactPhone: string; contactEmail?: string; notes: string; scheduledAt?: string; detailText?: string }) => CallReport | undefined;
   updateReport: (id: string, patch: Partial<CallReport>, diff?: AuditLog['diff']) => void;
   resolveFollowup: (id: string) => void;
   simulateIncomingReport: (tenantId: string) => CallReport | undefined;
+  clockIn: () => void;
+  clockOut: () => void;
+  forceCloseShift: (shiftId: string) => void;
 }
 
 const StoreContext = createContext<StoreApi | null>(null);
@@ -243,7 +285,17 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const addDisposition = useCallback<StoreApi['addDisposition']>((campaignId, data) => {
     dispatch({
       type: 'ADD_DISPOSITION',
-      disposition: { id: `d-${crypto.randomUUID().slice(0, 8)}`, campaignId, label: data.label, sortOrder: 99, requiresFollowup: data.requiresFollowup, isActive: true, color: data.requiresFollowup ? 'warning' : 'neutral' },
+      disposition: {
+        id: `d-${crypto.randomUUID().slice(0, 8)}`,
+        campaignId,
+        label: data.label,
+        sortOrder: 99,
+        requiresFollowup: data.requiresFollowup,
+        requiresDetail: data.requiresDetail ?? false,
+        requiresSchedule: data.requiresSchedule ?? false,
+        isActive: true,
+        color: data.requiresFollowup ? 'warning' : 'neutral',
+      },
       actorId,
     });
   }, [actorId]);
@@ -251,6 +303,10 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
   const moveDisposition = useCallback<StoreApi['moveDisposition']>((campaignId, id, direction) => dispatch({ type: 'MOVE_DISPOSITION', campaignId, id, direction }), []);
 
   const createReport = useCallback<StoreApi['createReport']>((data) => {
+    // Espeja la política RLS call_reports_agent_insert: sin turno abierto
+    // propio, no hay reporte.
+    const openShift = state.shifts.find((s) => s.userId === actorId && !s.endedAt);
+    if (!openShift) return undefined;
     const campaign = state.campaigns.find((c) => c.id === data.campaignId);
     const now = new Date().toISOString();
     const report: CallReport = {
@@ -265,10 +321,13 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       notes: data.notes,
       createdAt: now,
       updatedAt: now,
+      shiftId: openShift.id,
+      scheduledAt: data.scheduledAt,
+      detailText: data.detailText,
     };
     dispatch({ type: 'CREATE_REPORT', report, actorId });
     return report;
-  }, [actorId, state.campaigns]);
+  }, [actorId, state.campaigns, state.shifts]);
   const updateReport = useCallback<StoreApi['updateReport']>((id, patch, diff) => dispatch({ type: 'UPDATE_REPORT', id, patch, actorId, diff }), [actorId]);
   const resolveFollowup = useCallback<StoreApi['resolveFollowup']>((id) => dispatch({ type: 'RESOLVE_FOLLOWUP', id, actorId }), [actorId]);
 
@@ -282,6 +341,16 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     const disposition = campaignDispositions[Math.floor(Math.random() * campaignDispositions.length)];
     const contactName = contactNamePool[Math.floor(Math.random() * contactNamePool.length)];
     const now = new Date().toISOString();
+
+    // El botón de demo nunca debe quedar muerto: si el agente elegido no
+    // tiene turno abierto, se le abre uno aquí mismo (mismo criterio que
+    // createReport, que exige turno abierto para todo reporte de agente).
+    let openShift = state.shifts.find((s) => s.userId === agentId && !s.endedAt);
+    if (!openShift) {
+      openShift = { id: `sh-sim-${crypto.randomUUID().slice(0, 8)}`, userId: agentId, startedAt: now };
+      dispatch({ type: 'CLOCK_IN', shift: openShift, actorId: agentId });
+    }
+
     const report: CallReport = {
       id: `CR-${reportSeq++}`,
       tenantId,
@@ -293,10 +362,25 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
       notes: 'Llamada simulada para la demo en vivo.',
       createdAt: now,
       updatedAt: now,
+      shiftId: openShift.id,
     };
     dispatch({ type: 'CREATE_REPORT', report, actorId: agentId });
     return report;
-  }, [state.campaigns, state.dispositions]);
+  }, [state.campaigns, state.dispositions, state.shifts]);
+
+  const clockIn = useCallback<StoreApi['clockIn']>(() => {
+    dispatch({
+      type: 'CLOCK_IN',
+      shift: { id: `sh-${crypto.randomUUID().slice(0, 8)}`, userId: actorId, startedAt: new Date().toISOString() },
+      actorId,
+    });
+  }, [actorId]);
+  const clockOut = useCallback<StoreApi['clockOut']>(() => {
+    dispatch({ type: 'CLOCK_OUT', userId: actorId, endedAt: new Date().toISOString(), actorId });
+  }, [actorId]);
+  const forceCloseShift = useCallback<StoreApi['forceCloseShift']>((shiftId) => {
+    dispatch({ type: 'FORCE_CLOSE_SHIFT', shiftId, endedAt: new Date().toISOString(), closedBy: actorId, actorId });
+  }, [actorId]);
 
   const value = useMemo<StoreApi>(() => ({
     state, currentUser, switchUser, selectAgentCampaign,
@@ -304,7 +388,8 @@ export function AppStoreProvider({ children }: { children: ReactNode }) {
     createCampaign, updateCampaign, toggleCampaignAgent,
     addDisposition, updateDisposition, moveDisposition,
     createReport, updateReport, resolveFollowup, simulateIncomingReport,
-  }), [state, currentUser, switchUser, selectAgentCampaign, createTenant, updateTenant, createUser, updateUser, createCampaign, updateCampaign, toggleCampaignAgent, addDisposition, updateDisposition, moveDisposition, createReport, updateReport, resolveFollowup, simulateIncomingReport]);
+    clockIn, clockOut, forceCloseShift,
+  }), [state, currentUser, switchUser, selectAgentCampaign, createTenant, updateTenant, createUser, updateUser, createCampaign, updateCampaign, toggleCampaignAgent, addDisposition, updateDisposition, moveDisposition, createReport, updateReport, resolveFollowup, simulateIncomingReport, clockIn, clockOut, forceCloseShift]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

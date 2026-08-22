@@ -75,6 +75,8 @@ model User {
   resolvedFollowups   CallReport[]       @relation("CallReportFollowupResolver")
   auditLogs           AuditLog[]
   pushTokens          PushToken[]
+  shifts              Shift[]            @relation("ShiftUser")
+  shiftsClosed        Shift[]            @relation("ShiftClosedBy")
 
   @@map("users")
 }
@@ -126,13 +128,23 @@ model Disposition {
   id               String  @id @default(uuid())
   campaignId       String  @map("campaign_id")
   label            String
+  // Slug estable (venta, cita, consulta, mensaje, seguimiento, reclamo,
+  // no_interesado, otro) usado por el frontend para íconos/colores/métricas
+  // en vez de comparar la etiqueta en español. Nullable: las tipificaciones
+  // que crea un admin desde el panel no llevan code.
+  code             String?
   sortOrder        Int     @default(0) @map("sort_order")
   requiresFollowup Boolean @default(false) @map("requires_followup")
+  requiresDetail   Boolean @default(false) @map("requires_detail")
+  requiresSchedule Boolean @default(false) @map("requires_schedule")
   isActive         Boolean @default(true) @map("is_active")
+  color            String?
+  icon             String?
 
   campaign    Campaign     @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   callReports CallReport[]
 
+  @@unique([campaignId, code])
   @@index([campaignId])
   @@map("dispositions")
 }
@@ -152,6 +164,13 @@ model CallReport {
   durationSeconds    Int?      @map("duration_seconds")
   externalCallId     String?   @map("external_call_id")
   recordingUrl       String?   @map("recording_url")
+  // Nullable en el esquema (reportes históricos y ediciones de supervisor no
+  // siempre cuelgan de un turno), pero la política RLS de INSERT del agente
+  // (ver migración shifts_rls) exige un turno abierto propio -- el bloqueo
+  // "sin turno no se reporta" vive en la base, no solo en la UI.
+  shiftId            String?   @map("shift_id")
+  scheduledAt        DateTime? @map("scheduled_at")
+  detailText         String?   @map("detail_text")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
@@ -160,11 +179,35 @@ model CallReport {
   agent            User        @relation("CallReportAgent", fields: [agentId], references: [id])
   disposition      Disposition @relation(fields: [dispositionId], references: [id])
   followupResolver User?       @relation("CallReportFollowupResolver", fields: [followupResolvedBy], references: [id])
+  shift            Shift?      @relation(fields: [shiftId], references: [id])
 
   @@index([tenantId, createdAt])
   @@index([tenantId, dispositionId])
   @@index([agentId, createdAt])
+  @@index([tenantId, scheduledAt])
   @@map("call_reports")
+}
+
+// Registro de jornada del agente (clock in/out). No lleva tenant_id: un
+// turno es del call center, no de una empresa cliente -- los client_user no
+// tienen ninguna política RLS sobre esta tabla y por lo tanto no ven turnos.
+model Shift {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  startedAt DateTime  @default(now()) @map("started_at")
+  endedAt   DateTime? @map("ended_at")
+  // Supervisor que cerró un turno olvidado (clock-out manual desde el panel).
+  closedBy  String?   @map("closed_by")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user        User         @relation("ShiftUser", fields: [userId], references: [id], onDelete: Cascade)
+  closer      User?        @relation("ShiftClosedBy", fields: [closedBy], references: [id])
+  callReports CallReport[]
+
+  @@index([userId, startedAt])
+  @@index([startedAt])
+  @@map("shifts")
 }
 
 // Inmutable por diseño: sin updatedAt, y REVOKE UPDATE/DELETE para

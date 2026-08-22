@@ -3,9 +3,17 @@ import { Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Pie, PieChart, Res
 import { AdminLayout } from '../../components/AdminLayout';
 import { KpiCard } from '../../components/KpiCard';
 import { useStore } from '../../store/AppStore';
-import { pendingFollowups } from '../../lib/selectors';
+import { activeHoursFor, agentsOnShift, pendingFollowups } from '../../lib/selectors';
 
-const DONUT_COLORS = ['#24389c', '#006c49', '#805000', '#757684'];
+const COLOR_HEX: Record<string, string> = {
+  success: '#006c49',
+  warning: '#805000',
+  error: '#ba1a1a',
+  primary: '#24389c',
+  neutral: '#757684',
+  purple: '#7c3aed',
+  teal: '#0d9488',
+};
 
 export function MetricasPage() {
   const { state } = useStore();
@@ -14,23 +22,27 @@ export function MetricasPage() {
   const agents = users.filter((u) => u.role === 'agent');
   const activeTenants = tenants.filter((t) => t.status === 'active').length;
   const pending = pendingFollowups(state).length;
+  const onShiftCount = agentsOnShift(state).length;
+
+  const thirtyDaysAgo = useMemo(() => new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), []);
 
   const byAgent = useMemo(
     () =>
       agents.map((agent) => {
         const agentReports = reports.filter((r) => r.agentId === agent.id);
-        const ventas = agentReports.filter((r) => dispositions.find((d) => d.id === r.dispositionId)?.label === 'Venta Completada').length;
+        const ventas = agentReports.filter((r) => dispositions.find((d) => d.id === r.dispositionId)?.code === 'venta').length;
         const seguimientos = agentReports.filter((r) => dispositions.find((d) => d.id === r.dispositionId)?.requiresFollowup).length;
+        const activeHours = activeHoursFor(state, agent.id, thirtyDaysAgo);
         return {
           name: agent.fullName.split(' ')[0] + ' ' + (agent.fullName.split(' ')[1]?.[0] ?? ''),
           fullName: agent.fullName,
           reportes: agentReports.length,
-          promHora: agentReports.length ? +(agentReports.length / 22).toFixed(1) : 0,
+          promHora: activeHours > 0 ? +(agentReports.length / activeHours).toFixed(1) : 0,
           ventas,
           seguimientos,
         };
       }),
-    [agents, reports, dispositions],
+    [agents, reports, dispositions, state, thirtyDaysAgo],
   );
 
   const dailyVolume = useMemo(() => {
@@ -50,24 +62,28 @@ export function MetricasPage() {
   }, [reports]);
 
   const distribution = useMemo(() => {
-    const byLabel = new Map<string, number>();
+    const byCode = new Map<string, { name: string; value: number; color?: string }>();
     for (const r of reports) {
       const d = dispositions.find((x) => x.id === r.dispositionId);
       if (!d) continue;
-      byLabel.set(d.label, (byLabel.get(d.label) ?? 0) + 1);
+      const key = d.code ?? d.label;
+      const existing = byCode.get(key);
+      if (existing) existing.value += 1;
+      else byCode.set(key, { name: d.label, value: 1, color: d.color });
     }
-    return Array.from(byLabel.entries()).map(([name, value]) => ({ name, value }));
+    return Array.from(byCode.values());
   }, [reports, dispositions]);
 
   const avgPerAgentHour = byAgent.length ? (byAgent.reduce((s, a) => s + a.promHora, 0) / byAgent.length).toFixed(1) : '0.0';
 
   return (
     <AdminLayout title="Dashboard de Métricas">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-gutter">
         <KpiCard label="Reportes totales" value={reports.length.toLocaleString('es-ES')} icon="assessment" trend="Histórico del seed" trendTone="up" />
-        <KpiCard label="Promedio por agente/hora" value={avgPerAgentHour} icon="speed" trend="Estable" trendTone="neutral" />
+        <KpiCard label="Promedio por agente/hora" value={avgPerAgentHour} icon="speed" trend="Últimos 30 días en turno" trendTone="neutral" />
         <KpiCard label="Seguimientos pendientes" value={pending} icon="pending_actions" trend="Requiere atención" trendTone="warning" accent="warning" />
         <KpiCard label="Clientes activos" value={activeTenants} icon="business_center" trend={`de ${tenants.length} totales`} trendTone="up" />
+        <KpiCard label="Agentes en turno" value={onShiftCount} icon="punch_clock" trend="Ahora mismo" trendTone="up" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-gutter">
@@ -104,8 +120,8 @@ export function MetricasPage() {
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={distribution} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
-                  {distribution.map((entry, i) => (
-                    <Cell key={entry.name} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                  {distribution.map((entry) => (
+                    <Cell key={entry.name} fill={COLOR_HEX[entry.color ?? 'neutral'] ?? COLOR_HEX.neutral} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -113,10 +129,10 @@ export function MetricasPage() {
             </ResponsiveContainer>
           </div>
           <div className="w-full mt-md space-y-sm">
-            {distribution.map((d, i) => (
+            {distribution.map((d) => (
               <div key={d.name} className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-xs">
-                  <div className="w-3 h-3 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                  <div className="w-3 h-3 rounded-full" style={{ background: COLOR_HEX[d.color ?? 'neutral'] ?? COLOR_HEX.neutral }} />
                   <span className="font-body-sm text-on-surface">{d.name}</span>
                 </div>
                 <span className="font-label-sm">{Math.round((d.value / reports.length) * 100)}%</span>

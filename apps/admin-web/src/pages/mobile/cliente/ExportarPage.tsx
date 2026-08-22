@@ -30,8 +30,16 @@ export function ExportarPage() {
   const pending = tenant ? pendingFollowups(state, tenant.id) : [];
   const clientTabs = clientTabsBase.map((t) => (t.to.includes('seguimientos') ? { ...t, badge: pending.length } : t));
 
-  const tenantDispositions = tenant ? state.dispositions.filter((d) => state.campaigns.some((c) => c.id === d.campaignId && c.tenantId === tenant.id)) : [];
-  const uniqueLabels = Array.from(new Set(tenantDispositions.map((d) => d.label)));
+  const tenantDispositions = useMemo(() => {
+    if (!tenant) return [];
+    const list = state.dispositions.filter((d) => state.campaigns.some((c) => c.id === d.campaignId && c.tenantId === tenant.id));
+    const seen = new Map<string, (typeof list)[number]>();
+    for (const d of list) {
+      const key = d.code ?? d.id;
+      if (!seen.has(key)) seen.set(key, d);
+    }
+    return Array.from(seen.values()).sort((a, b) => a.sortOrder - b.sortOrder);
+  }, [state.dispositions, state.campaigns, tenant]);
 
   const filtered = useMemo(() => {
     if (!tenant) return [];
@@ -41,7 +49,10 @@ export function ExportarPage() {
       if (r.tenantId !== tenant.id) return false;
       const t = new Date(r.createdAt).getTime();
       if (t < fromTime || t > toTime) return false;
-      if (dispositionFilter !== 'all' && dispositionById(state, r.dispositionId)?.label !== dispositionFilter) return false;
+      if (dispositionFilter !== 'all') {
+        const d = dispositionById(state, r.dispositionId);
+        if ((d?.code ?? d?.id) !== dispositionFilter) return false;
+      }
       return true;
     });
   }, [state, tenant, from, to, dispositionFilter]);
@@ -53,12 +64,17 @@ export function ExportarPage() {
       setTimeout(() => setToast(null), 3000);
       return;
     }
-    const header = ['ID', 'Fecha', 'Contacto', 'Teléfono', 'Campaña', 'Tipificación', 'Agente', 'Notas'];
+    const header = ['ID', 'Fecha', 'Contacto', 'Teléfono', 'Campaña', 'Tipificación', 'Agente', 'Cita agendada', 'Detalle', 'Notas'];
     const rows = filtered.map((r) => {
       const campaign = state.campaigns.find((c) => c.id === r.campaignId);
       const disposition = dispositionById(state, r.dispositionId);
       const agent = state.users.find((u) => u.id === r.agentId);
-      return [r.id, formatDateTime(r.createdAt), r.contactName, r.contactPhone, campaign?.name ?? '', disposition?.label ?? '', agent?.fullName ?? '', (r.notes ?? '').replace(/\n/g, ' ')];
+      return [
+        r.id, formatDateTime(r.createdAt), r.contactName, r.contactPhone, campaign?.name ?? '', disposition?.label ?? '', agent?.fullName ?? '',
+        r.scheduledAt ? formatDateTime(r.scheduledAt) : '',
+        r.detailText ?? '',
+        (r.notes ?? '').replace(/\n/g, ' '),
+      ];
     });
     const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -102,8 +118,8 @@ export function ExportarPage() {
             <label className="font-label-md text-label-md text-on-surface-variant">Tipificación</label>
             <select value={dispositionFilter} onChange={(e) => setDispositionFilter(e.target.value)} className="w-full px-sm py-sm rounded-lg border border-outline-variant bg-surface-container-lowest text-on-background font-body-md text-body-md">
               <option value="all">Todas</option>
-              {uniqueLabels.map((l) => (
-                <option key={l} value={l}>{l}</option>
+              {tenantDispositions.map((d) => (
+                <option key={d.code ?? d.id} value={d.code ?? d.id}>{d.label}</option>
               ))}
             </select>
           </div>

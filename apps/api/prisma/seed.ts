@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Prisma, PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import argon2 from 'argon2';
+import { randomUUID } from 'node:crypto';
 
 // Conecta con DATABASE_URL (rol `migrator`, BYPASSRLS — ver prisma/init/01-roles.sql).
 // No hace falta ningún set_config de sesión en este script: migrator no
@@ -34,12 +35,31 @@ function daysAgo(days: number, hour: number, minute: number): Date {
   d.setHours(hour, minute, 0, 0);
   return d;
 }
+function daysFromNow(days: number, hour: number, minute: number): Date {
+  return daysAgo(-days, hour, minute);
+}
 
+// Mismo set que packages/shared/src/constants.ts (DEFAULT_DISPOSITIONS).
+// Copia standalone a propósito (ver comentario de mulberry32 arriba): este
+// script vive fuera de packages/shared. Si cambia una lista, actualizar
+// también la otra.
 const DEFAULT_DISPOSITIONS = [
-  { label: 'Venta Completada', requiresFollowup: false },
-  { label: 'Consulta Resuelta', requiresFollowup: false },
-  { label: 'Seguimiento Pendiente', requiresFollowup: true },
-  { label: 'No Interesado', requiresFollowup: false },
+  { code: 'venta', label: 'Venta Completada', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'success', icon: 'check_circle' },
+  { code: 'cita', label: 'Cita Agendada', requiresFollowup: true, requiresDetail: false, requiresSchedule: true, color: 'teal', icon: 'event_available' },
+  { code: 'consulta', label: 'Consulta Resuelta', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'primary', icon: 'support_agent' },
+  { code: 'mensaje', label: 'Mensaje Tomado', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'warning', icon: 'sticky_note_2' },
+  { code: 'seguimiento', label: 'Seguimiento Pendiente', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'warning', icon: 'schedule' },
+  { code: 'reclamo', label: 'Reclamo / Queja', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'error', icon: 'report_problem' },
+  { code: 'no_interesado', label: 'No Interesado', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'neutral', icon: 'do_not_disturb' },
+  { code: 'otro', label: 'Otro', requiresFollowup: false, requiresDetail: true, requiresSchedule: false, color: 'purple', icon: 'more_horiz' },
+] as const;
+
+const DETAIL_POOL = [
+  'Solicito hablar con un gerente.',
+  'Pregunta sobre una promocion vista en redes sociales.',
+  'Consulta general sobre el catalogo de productos.',
+  'Pidio que se le contacte en otro horario.',
+  'Reporto un problema con el sitio web.',
 ];
 
 const CONTACT_POOL = [
@@ -65,6 +85,7 @@ async function main() {
   await prisma.$transaction([
     prisma.pushToken.deleteMany(),
     prisma.callReport.deleteMany(),
+    prisma.shift.deleteMany(),
     prisma.disposition.deleteMany(),
     prisma.campaignAgent.deleteMany(),
     prisma.campaign.deleteMany(),
@@ -180,9 +201,14 @@ async function main() {
           data: {
             campaignId: campaign.id,
             label: d.label,
+            code: d.code,
             sortOrder: i,
             requiresFollowup: d.requiresFollowup,
+            requiresDetail: d.requiresDetail,
+            requiresSchedule: d.requiresSchedule,
             isActive: true,
+            color: d.color,
+            icon: d.icon,
           },
         }),
       );
@@ -202,52 +228,113 @@ async function main() {
       data: assigned.map((a) => ({ campaignId: campaign.id, userId: a.id })),
     });
   }
+  const campaignsByAgent = new Map<string, typeof allCampaigns>();
+  for (const campaign of allCampaigns) {
+    for (const agent of agentsByCampaign.get(campaign.id)!) {
+      const arr = campaignsByAgent.get(agent.id) ?? [];
+      arr.push(campaign);
+      campaignsByAgent.set(agent.id, arr);
+    }
+  }
+
+  // Turnos (clock in/out): ~20 turnos cerrados de 6-9h por agente en los
+  // últimos 30 días + un turno abierto hoy para los dos primeros agentes,
+  // para que el seed arranque con estado mixto "en turno" / "fuera de
+  // turno" (útil para demostrar el bloqueo de reportes sin turno).
+  interface SeedShift {
+    id: string;
+    userId: string;
+    startedAt: Date;
+    endedAt: Date | null;
+  }
+  const shiftsByAgent = new Map<string, SeedShift[]>();
+  const shiftRows: Prisma.ShiftCreateManyInput[] = [];
+  for (let a = 0; a < agents.length; a++) {
+    const agent = agents[a];
+    const agentShifts: SeedShift[] = [];
+    for (let day = 29; day >= 1; day--) {
+      if (rand() > 0.72) continue; // día libre
+      const startHour = 8 + Math.floor(rand() * 3);
+      const startMinute = Math.floor(rand() * 60);
+      const durationHours = 6 + rand() * 3;
+      const startedAt = daysAgo(day, startHour, startMinute);
+      const endedAt = new Date(startedAt.getTime() + durationHours * 3600_000);
+      agentShifts.push({ id: randomUUID(), userId: agent.id, startedAt, endedAt });
+    }
+    if (a < 2) {
+      const startedAt = daysAgo(0, 8 + Math.floor(rand() * 2), Math.floor(rand() * 60));
+      agentShifts.push({ id: randomUUID(), userId: agent.id, startedAt, endedAt: null });
+    }
+    agentShifts.sort((x, y) => x.startedAt.getTime() - y.startedAt.getTime());
+    shiftsByAgent.set(agent.id, agentShifts);
+    shiftRows.push(...agentShifts);
+  }
+  await prisma.shift.createMany({ data: shiftRows });
 
   function weightedDisposition(
     dispositions: Awaited<ReturnType<typeof prisma.disposition.create>>[],
   ) {
     const r = rand();
-    if (r < 0.35) return dispositions[0]; // Venta Completada
-    if (r < 0.65) return dispositions[1]; // Consulta Resuelta
-    if (r < 0.85) return dispositions[2]; // Seguimiento Pendiente
-    return dispositions[3]; // No Interesado
+    if (r < 0.2) return dispositions[0]; // venta
+    if (r < 0.3) return dispositions[1]; // cita
+    if (r < 0.5) return dispositions[2]; // consulta
+    if (r < 0.6) return dispositions[3]; // mensaje
+    if (r < 0.75) return dispositions[4]; // seguimiento
+    if (r < 0.85) return dispositions[5]; // reclamo
+    if (r < 0.95) return dispositions[6]; // no_interesado
+    return dispositions[7]; // otro
   }
 
+  // Cada reporte cuelga de un turno real del agente que lo crea (espeja la
+  // política RLS call_reports_agent_insert), con created_at cayendo dentro
+  // de la ventana del turno.
   const reportsData: Prisma.CallReportCreateManyInput[] = [];
   let remaining = 200;
-  for (let day = 0; day < 30 && remaining > 0; day++) {
-    const countToday =
-      day === 29 ? remaining : Math.min(remaining, 4 + Math.floor(rand() * 5));
-    for (let i = 0; i < countToday; i++) {
-      const campaign = pick(allCampaigns);
-      const campaignAgents = agentsByCampaign.get(campaign.id)!;
-      const agent = pick(campaignAgents);
-      const dispositions = dispositionsByCampaign.get(campaign.id)!;
-      const disposition = weightedDisposition(dispositions);
-      const createdAt = daysAgo(day, 8 + Math.floor(rand() * 10), Math.floor(rand() * 60));
-      const contactName = pick(CONTACT_POOL);
-      const resolved = disposition.requiresFollowup && rand() > 0.6;
+  for (const agent of agents) {
+    if (remaining <= 0) break;
+    const agentCampaigns = campaignsByAgent.get(agent.id) ?? [];
+    if (agentCampaigns.length === 0) continue;
+    const agentShifts = shiftsByAgent.get(agent.id) ?? [];
+    for (const shift of agentShifts) {
+      if (remaining <= 0) break;
+      const reportsThisShift = Math.min(remaining, 2 + Math.floor(rand() * 4));
+      const shiftStart = shift.startedAt.getTime();
+      const shiftEnd = (shift.endedAt ?? new Date()).getTime();
+      for (let i = 0; i < reportsThisShift && remaining > 0; i++) {
+        const campaign = pick(agentCampaigns);
+        const dispositions = dispositionsByCampaign.get(campaign.id)!;
+        const disposition = weightedDisposition(dispositions);
+        const createdAt = new Date(shiftStart + rand() * Math.max(shiftEnd - shiftStart, 60_000));
+        const contactName = pick(CONTACT_POOL);
+        const resolved = disposition.requiresFollowup && rand() > 0.6;
 
-      reportsData.push({
-        tenantId: campaign.tenantId,
-        campaignId: campaign.id,
-        agentId: agent.id,
-        dispositionId: disposition.id,
-        contactName,
-        contactPhone: `555-0${100 + Math.floor(rand() * 899)}`,
-        contactEmail:
-          rand() > 0.5
-            ? `${contactName.split(' ')[0].toLowerCase()}@correo.com`
+        reportsData.push({
+          tenantId: campaign.tenantId,
+          campaignId: campaign.id,
+          agentId: agent.id,
+          dispositionId: disposition.id,
+          contactName,
+          contactPhone: `555-0${100 + Math.floor(rand() * 899)}`,
+          contactEmail:
+            rand() > 0.5
+              ? `${contactName.split(' ')[0].toLowerCase()}@correo.com`
+              : null,
+          notes: pick(NOTES_POOL),
+          createdAt,
+          updatedAt: createdAt,
+          followupResolvedAt: resolved
+            ? new Date(createdAt.getTime() + 3600_000)
             : null,
-        notes: pick(NOTES_POOL),
-        createdAt,
-        updatedAt: createdAt,
-        followupResolvedAt: resolved
-          ? new Date(createdAt.getTime() + 3600_000)
-          : null,
-        followupResolvedBy: resolved ? supervisor.id : null,
-      });
-      remaining--;
+          followupResolvedBy: resolved ? supervisor.id : null,
+          shiftId: shift.id,
+          scheduledAt:
+            disposition.code === 'cita'
+              ? daysFromNow(1 + Math.floor(rand() * 13), 9 + Math.floor(rand() * 8), Math.floor(rand() * 60))
+              : null,
+          detailText: disposition.code === 'otro' ? pick(DETAIL_POOL) : null,
+        });
+        remaining--;
+      }
     }
   }
 
@@ -255,7 +342,7 @@ async function main() {
 
   console.log(
     `Seed completo: 2 tenants, ${1 + 1 + agents.length + acmeClients.length + globexClients.length} usuarios, ` +
-      `${allCampaigns.length} campañas, ${reportsData.length} call_reports.`,
+      `${allCampaigns.length} campañas, ${shiftRows.length} turnos, ${reportsData.length} call_reports.`,
   );
 }
 

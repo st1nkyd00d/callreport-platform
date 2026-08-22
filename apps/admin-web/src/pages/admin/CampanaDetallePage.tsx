@@ -14,6 +14,8 @@ export function CampanaDetallePage() {
   const [toast, setToast] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState('');
   const [newRequiresFollowup, setNewRequiresFollowup] = useState(false);
+  const [newRequiresDetail, setNewRequiresDetail] = useState(false);
+  const [newRequiresSchedule, setNewRequiresSchedule] = useState(false);
 
   const campaign = state.campaigns.find((c) => c.id === id);
   const tenant = campaign ? state.tenants.find((t) => t.id === campaign.tenantId) : undefined;
@@ -79,15 +81,17 @@ export function CampanaDetallePage() {
       {tab === 'tipificaciones' && (
         <section className="space-y-md">
           <div className="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
-            <div className="hidden md:grid grid-cols-[48px_1fr_200px_120px] gap-md px-md py-sm bg-surface-container-low border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase">
+            <div className="hidden md:grid grid-cols-[48px_1fr_150px_120px_120px_100px] gap-md px-md py-sm bg-surface-container-low border-b border-outline-variant font-label-sm text-label-sm text-on-surface-variant uppercase">
               <div></div>
               <div>Etiqueta de resultado</div>
               <div>Regla de seguimiento</div>
+              <div>Requiere detalle</div>
+              <div>Requiere fecha</div>
               <div>Estado</div>
             </div>
             <div className="divide-y divide-outline-variant/50">
               {dispositions.map((d, idx) => (
-                <div key={d.id} className={`flex flex-col md:grid md:grid-cols-[48px_1fr_200px_120px] gap-sm md:gap-md items-start md:items-center p-md hover:bg-surface-bright transition-colors ${!d.isActive ? 'opacity-60' : ''}`}>
+                <div key={d.id} className={`flex flex-col md:grid md:grid-cols-[48px_1fr_150px_120px_120px_100px] gap-sm md:gap-md items-start md:items-center p-md hover:bg-surface-bright transition-colors ${!d.isActive ? 'opacity-60' : ''}`}>
                   <div className="hidden md:flex flex-col gap-0.5">
                     <button disabled={idx === 0} onClick={() => moveDisposition(campaign.id, d.id, 'up')} className="text-outline hover:text-primary disabled:opacity-30">
                       <Icon name="keyboard_arrow_up" className="text-[18px]" />
@@ -105,6 +109,12 @@ export function CampanaDetallePage() {
                       </span>
                     </label>
                   </div>
+                  <div>
+                    <Toggle size="sm" checked={d.requiresDetail} onChange={(v) => updateDisposition(d.id, { requiresDetail: v })} />
+                  </div>
+                  <div>
+                    <Toggle size="sm" checked={d.requiresSchedule} onChange={(v) => updateDisposition(d.id, { requiresSchedule: v })} />
+                  </div>
                   <div className="flex items-center">
                     <Toggle checked={d.isActive} onChange={(v) => updateDisposition(d.id, { isActive: v })} />
                   </div>
@@ -113,27 +123,44 @@ export function CampanaDetallePage() {
             </div>
           </div>
 
-          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex flex-col md:flex-row items-start md:items-end gap-md">
-            <div className="flex flex-col gap-1 flex-1 w-full">
+          <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-md flex flex-col gap-md">
+            <div className="flex flex-col gap-1 w-full">
               <label className="font-label-sm text-label-sm text-on-surface-variant">Nueva tipificación</label>
               <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)} placeholder="Ej. Reagendar llamada" className="w-full px-3 py-2 border border-outline-variant rounded bg-background font-body-md text-body-md" />
             </div>
-            <label className="flex items-center gap-xs">
-              <Toggle size="sm" checked={newRequiresFollowup} onChange={setNewRequiresFollowup} />
-              <span className="font-label-sm text-label-sm text-on-surface-variant">Requiere seguimiento</span>
-            </label>
-            <button
-              onClick={() => {
-                if (!newLabel.trim()) return;
-                addDisposition(campaign.id, { label: newLabel.trim(), requiresFollowup: newRequiresFollowup });
-                setNewLabel('');
-                setNewRequiresFollowup(false);
-                showToast('Tipificación agregada');
-              }}
-              className="flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
-            >
-              <Icon name="add" className="text-[18px]" /> Agregar tipificación
-            </button>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-md flex-wrap">
+              <label className="flex items-center gap-xs">
+                <Toggle size="sm" checked={newRequiresFollowup} onChange={setNewRequiresFollowup} />
+                <span className="font-label-sm text-label-sm text-on-surface-variant">Requiere seguimiento</span>
+              </label>
+              <label className="flex items-center gap-xs">
+                <Toggle size="sm" checked={newRequiresDetail} onChange={setNewRequiresDetail} />
+                <span className="font-label-sm text-label-sm text-on-surface-variant">Requiere detalle</span>
+              </label>
+              <label className="flex items-center gap-xs">
+                <Toggle size="sm" checked={newRequiresSchedule} onChange={setNewRequiresSchedule} />
+                <span className="font-label-sm text-label-sm text-on-surface-variant">Requiere fecha (cita)</span>
+              </label>
+              <button
+                onClick={() => {
+                  if (!newLabel.trim()) return;
+                  addDisposition(campaign.id, {
+                    label: newLabel.trim(),
+                    requiresFollowup: newRequiresFollowup,
+                    requiresDetail: newRequiresDetail,
+                    requiresSchedule: newRequiresSchedule,
+                  });
+                  setNewLabel('');
+                  setNewRequiresFollowup(false);
+                  setNewRequiresDetail(false);
+                  setNewRequiresSchedule(false);
+                  showToast('Tipificación agregada');
+                }}
+                className="flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap md:ml-auto"
+              >
+                <Icon name="add" className="text-[18px]" /> Agregar tipificación
+              </button>
+            </div>
           </div>
         </section>
       )}

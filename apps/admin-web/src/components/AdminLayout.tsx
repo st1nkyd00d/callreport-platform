@@ -9,6 +9,7 @@ const navItems = [
   { to: '/admin/metricas', label: 'Métricas', icon: 'bar_chart' },
   { to: '/admin/clientes', label: 'Clientes', icon: 'business' },
   { to: '/admin/campanas', label: 'Campañas', icon: 'campaign' },
+  { to: '/admin/turnos', label: 'Turnos', icon: 'punch_clock' },
   { to: '/admin/usuarios', label: 'Usuarios', icon: 'manage_accounts' },
   { to: '/admin/auditoria', label: 'Auditoría', icon: 'fact_check' },
 ];

@@ -5,18 +5,7 @@ import { MobileTopBar } from '../../components/MobileTopBar';
 import { BottomTabBar } from '../../components/BottomTabBar';
 import { useStore } from '../../store/AppStore';
 import { initials } from '../../lib/format';
-
-const agentTabs = [
-  { to: '/mobile/agente/nuevo-reporte', label: 'Reportar', icon: 'edit' },
-  { to: '/mobile/agente/mis-reportes', label: 'Mis reportes', icon: 'list_alt' },
-  { to: '/mobile/perfil', label: 'Perfil', icon: 'person' },
-];
-const clientTabs = [
-  { to: '/mobile/cliente/dashboard', label: 'Dashboard', icon: 'grid_view' },
-  { to: '/mobile/cliente/seguimientos', label: 'Seguimientos', icon: 'history_toggle_off' },
-  { to: '/mobile/cliente/exportar', label: 'Exportar', icon: 'download' },
-  { to: '/mobile/perfil', label: 'Perfil', icon: 'person' },
-];
+import { agentTabs, clientTabsBase as clientTabs } from '../../lib/tabs';
 
 export function PerfilPage() {
   const { currentUser, state } = useStore();

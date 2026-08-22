@@ -3,21 +3,9 @@ import { Icon } from '../../../components/Icon';
 import { MobileTopBar } from '../../../components/MobileTopBar';
 import { BottomTabBar } from '../../../components/BottomTabBar';
 import { useStore } from '../../../store/AppStore';
-import { dispositionById, reportsToday } from '../../../lib/selectors';
-import { formatTime, minutesRemainingInWindow } from '../../../lib/format';
-
-const agentTabs = [
-  { to: '/mobile/agente/nuevo-reporte', label: 'Reportar', icon: 'edit' },
-  { to: '/mobile/agente/mis-reportes', label: 'Mis reportes', icon: 'list_alt' },
-  { to: '/mobile/perfil', label: 'Perfil', icon: 'person' },
-];
-
-const pillVariant: Record<string, 'success' | 'warning' | 'neutral' | 'primary'> = {
-  'Venta Completada': 'success',
-  'Consulta Resuelta': 'primary',
-  'Seguimiento Pendiente': 'warning',
-  'No Interesado': 'neutral',
-};
+import { agentTabs } from '../../../lib/tabs';
+import { activeHoursFor, dispositionById, dispositionPillVariant, reportsToday } from '../../../lib/selectors';
+import { formatAppointment, formatTime, minutesRemainingInWindow } from '../../../lib/format';
 
 export function MisReportesPage() {
   const { state, currentUser, updateReport } = useStore();
@@ -30,6 +18,9 @@ export function MisReportesPage() {
   const tenant = currentUser?.tenantId ? state.tenants.find((t) => t.id === currentUser.tenantId) : undefined;
   const editWindow = tenant?.editWindowMinutes ?? 30;
   const followupsCount = filtered.filter((r) => dispositionById(state, r.dispositionId)?.requiresFollowup).length;
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const hoursToday = currentUser ? activeHoursFor(state, currentUser.id, todayStart.toISOString()) : 0;
 
   return (
     <div className="h-full flex flex-col relative">
@@ -50,6 +41,10 @@ export function MisReportesPage() {
             <Icon name="history_toggle_off" className="text-[18px] text-tertiary-container" />
             <span className="font-label-md text-label-md text-on-background">{followupsCount} seguimientos</span>
           </div>
+          <div className="flex items-center gap-2 bg-surface-container-lowest border border-outline-variant rounded-full px-4 py-2 whitespace-nowrap">
+            <Icon name="punch_clock" className="text-[18px] text-secondary" />
+            <span className="font-label-md text-label-md text-on-background">{hoursToday.toFixed(1)}h en turno hoy</span>
+          </div>
         </div>
 
         <div className="flex flex-col gap-md">
@@ -58,8 +53,14 @@ export function MisReportesPage() {
             const campaign = state.campaigns.find((c) => c.id === r.campaignId);
             const minsLeft = minutesRemainingInWindow(r.createdAt, editWindow);
             const editable = minsLeft > 0;
-            const variant = disposition ? pillVariant[disposition.label] ?? 'neutral' : 'neutral';
-            const barColor = variant === 'success' ? 'bg-secondary' : variant === 'warning' ? 'bg-tertiary-container' : variant === 'primary' ? 'bg-primary' : 'bg-outline';
+            const variant = dispositionPillVariant(disposition?.color);
+            const barColor =
+              variant === 'success' ? 'bg-secondary' :
+              variant === 'warning' ? 'bg-tertiary-container' :
+              variant === 'error' ? 'bg-error' :
+              variant === 'primary' ? 'bg-primary' :
+              variant === 'teal' ? 'bg-teal-500' :
+              variant === 'purple' ? 'bg-purple-500' : 'bg-outline';
             return (
               <div key={r.id} className={`bg-surface-container-lowest border border-outline-variant rounded-xl p-md flex flex-col gap-sm shadow-sm relative overflow-hidden ${!editable ? 'opacity-80' : ''}`}>
                 <div className={`absolute left-0 top-0 bottom-0 w-[4px] ${barColor}`} />
@@ -70,11 +71,22 @@ export function MisReportesPage() {
                     </p>
                     <h3 className="font-label-md text-label-md text-on-background">{r.contactName}</h3>
                     <p className="font-body-sm text-body-sm text-outline mt-1">ID: {r.id}</p>
+                    {r.scheduledAt && (
+                      <p className="font-body-sm text-body-sm text-teal-700 mt-1 flex items-center gap-1">
+                        <Icon name="event_available" className="text-[14px]" /> Cita: {formatAppointment(r.scheduledAt)}
+                      </p>
+                    )}
+                    {r.detailText && (
+                      <p className="font-body-sm text-body-sm text-purple-700 mt-1">Otro: {r.detailText}</p>
+                    )}
                   </div>
                   <span className={`px-2 py-1 rounded font-label-sm text-label-sm border ${
                     variant === 'success' ? 'bg-secondary/10 text-secondary border-secondary/20' :
                     variant === 'warning' ? 'bg-tertiary-container/10 text-tertiary-container border-tertiary-container/20' :
+                    variant === 'error' ? 'bg-error/10 text-error border-error/20' :
                     variant === 'primary' ? 'bg-primary/10 text-primary border-primary/20' :
+                    variant === 'teal' ? 'bg-teal-100 text-teal-700 border-teal-200' :
+                    variant === 'purple' ? 'bg-purple-100 text-purple-700 border-purple-200' :
                     'bg-outline/10 text-on-surface-variant border-outline/20'
                   }`}>{disposition?.label}</span>
                 </div>

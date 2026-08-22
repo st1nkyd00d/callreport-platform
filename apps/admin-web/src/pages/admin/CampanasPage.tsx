@@ -84,7 +84,7 @@ export function CampanasPage() {
               ))}
             </select>
           </div>
-          <p className="font-body-sm text-body-sm text-on-surface-variant">Se crearán automáticamente las 4 tipificaciones por defecto (editables después).</p>
+          <p className="font-body-sm text-body-sm text-on-surface-variant">Se crearán automáticamente las 8 tipificaciones por defecto (editables después).</p>
         </SlideOver>
       </div>
     </AdminLayout>
