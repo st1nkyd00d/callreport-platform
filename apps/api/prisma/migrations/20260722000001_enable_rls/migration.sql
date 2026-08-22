@@ -10,9 +10,10 @@
 --
 -- current_setting(name, true) devuelve NULL si el GUC nunca fue seteado
 -- en la sesión. nullif(x, '') trata además un string vacío explícito como
--- no-seteado. Ambos casos terminan en una comparación contra NULL::uuid,
--- que siempre es falsa en USING/WITH CHECK — así se logra el criterio de
--- aceptación "sin settings seteados -> cero filas".
+-- no-seteado. Ambos casos terminan en una comparación contra NULL (texto,
+-- no uuid nativo -- las columnas id son TEXT en el schema), que siempre
+-- es falsa en USING/WITH CHECK — así se logra el criterio de aceptación
+-- "sin settings seteados -> cero filas".
 --
 -- Todos los roles de aplicación (super_admin/supervisor/agent/client_user)
 -- se conectan con el mismo rol de Postgres `app_user`; la diferenciación
@@ -48,7 +49,7 @@ CREATE POLICY campaigns_client_select ON campaigns
   FOR SELECT TO app_user
   USING (
     current_setting('app.role', true) = 'client_user'
-    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid
+    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')
   );
 
 CREATE POLICY campaigns_agent_select ON campaigns
@@ -57,7 +58,7 @@ CREATE POLICY campaigns_agent_select ON campaigns
     current_setting('app.role', true) = 'agent'
     AND id IN (
       SELECT campaign_id FROM campaign_agents
-      WHERE user_id = nullif(current_setting('app.user_id', true), '')::uuid
+      WHERE user_id = nullif(current_setting('app.user_id', true), '')
     )
   );
 
@@ -76,7 +77,7 @@ CREATE POLICY dispositions_client_select ON dispositions
     current_setting('app.role', true) = 'client_user'
     AND campaign_id IN (
       SELECT id FROM campaigns
-      WHERE tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid
+      WHERE tenant_id = nullif(current_setting('app.tenant_id', true), '')
     )
   );
 
@@ -86,7 +87,7 @@ CREATE POLICY dispositions_agent_select ON dispositions
     current_setting('app.role', true) = 'agent'
     AND campaign_id IN (
       SELECT campaign_id FROM campaign_agents
-      WHERE user_id = nullif(current_setting('app.user_id', true), '')::uuid
+      WHERE user_id = nullif(current_setting('app.user_id', true), '')
     )
   );
 
@@ -102,7 +103,7 @@ CREATE POLICY tenant_memberships_client_select ON tenant_memberships
   FOR SELECT TO app_user
   USING (
     current_setting('app.role', true) = 'client_user'
-    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid
+    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')
   );
 
 -- ---------------------------------------------------------------------
@@ -121,7 +122,7 @@ CREATE POLICY call_reports_client_select ON call_reports
   FOR SELECT TO app_user
   USING (
     current_setting('app.role', true) = 'client_user'
-    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')::uuid
+    AND tenant_id = nullif(current_setting('app.tenant_id', true), '')
   );
 
 CREATE POLICY call_reports_agent_select ON call_reports
@@ -130,7 +131,7 @@ CREATE POLICY call_reports_agent_select ON call_reports
     current_setting('app.role', true) = 'agent'
     AND campaign_id IN (
       SELECT campaign_id FROM campaign_agents
-      WHERE user_id = nullif(current_setting('app.user_id', true), '')::uuid
+      WHERE user_id = nullif(current_setting('app.user_id', true), '')
     )
   );
 
@@ -140,7 +141,7 @@ CREATE POLICY call_reports_agent_insert ON call_reports
     current_setting('app.role', true) = 'agent'
     AND campaign_id IN (
       SELECT campaign_id FROM campaign_agents
-      WHERE user_id = nullif(current_setting('app.user_id', true), '')::uuid
+      WHERE user_id = nullif(current_setting('app.user_id', true), '')
     )
     AND tenant_id = (SELECT tenant_id FROM campaigns WHERE id = call_reports.campaign_id)
   );
