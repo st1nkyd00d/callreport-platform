@@ -17,7 +17,7 @@ Un call center ofrece el servicio de contestar llamadas para otras empresas ("cl
 | Panel admin | React + Vite + TypeScript, TanStack Query, Recharts |
 | Push | Desde v1, vía Expo Notifications (FCM/APNs), `expo-server-sdk` en backend |
 | Telefonía | Manual siempre por ahora; el esquema deja campos opcionales (`duration_seconds`, `external_call_id`, `recording_url`) |
-| Escala | Pequeña (<20 agentes); hosting indefinido → Docker Compose portable |
+| Escala | Pequeña (<20 agentes); hosting indefinido (sin Docker por ahora — PostgreSQL y servicios corren directo en el host; se reevaluará Docker Compose para despliegue en Fase 8) |
 | Alcance v1 | Núcleo + métricas de agentes + cola de seguimientos + multi-usuario por tenant |
 
 ### Estructura del monorepo
@@ -30,7 +30,6 @@ Ricardo App/
 │   └── admin-web/    # React + Vite (admin/supervisores)
 ├── packages/
 │   └── shared/       # Tipos, DTOs y constantes compartidas
-├── docker-compose.yml
 ├── plan.md           # este archivo
 └── design.md         # prompts para Stitch AI
 ```
@@ -45,14 +44,14 @@ Ricardo App/
 
 **Objetivo:** infraestructura completa de desarrollo y un esquema de datos con aislamiento multi-tenant funcionando a nivel de base de datos, antes de escribir lógica de negocio.
 
-**Prerequisitos:** ninguno (fase inicial). Requiere Node 20+, Docker Desktop y Git instalados.
+**Prerequisitos:** ninguno (fase inicial). Requiere Node 20+, PostgreSQL 16 (instalado localmente) y Git instalados.
 
 ### Tareas
 
 1. **Monorepo**: inicializar repo git y workspace de npm (`package.json` raíz con `workspaces: ["apps/*", "packages/*"]`). Crear `packages/shared` con `src/types.ts` (roles, DTOs base) y `src/constants.ts`.
-2. **Docker Compose** (`docker-compose.yml`): servicio `postgres` (imagen `postgres:16-alpine`, volumen persistente, puerto 5432, healthcheck) y servicio `api` (build de `apps/api`, depende de postgres). `admin-web` se agrega en Fase 3.
+2. **PostgreSQL local**: instancia de PostgreSQL 16 corriendo en el host (sin Docker por ahora), base `callreport` en el puerto 5432.
 3. **Scaffold del API**: `nest new apps/api`. Instalar Prisma, configurar `DATABASE_URL` vía `.env` (crear `.env.example` documentado).
-4. **Roles de PostgreSQL** (crítico para RLS): script de inicialización `apps/api/prisma/init/01-roles.sql` montado en el contenedor de postgres que crea:
+4. **Roles de PostgreSQL** (crítico para RLS): script `apps/api/prisma/init/01-roles.sql`, corrido a mano vía `psql` contra la base local, que crea:
    - `app_user` — rol **no-superusuario** con el que se conecta NestJS (los superusuarios ignoran RLS).
    - `migrator` — rol dueño de las tablas, usado solo por `prisma migrate`.
 5. **Esquema Prisma completo** (`apps/api/prisma/schema.prisma`):
@@ -77,7 +76,7 @@ Ricardo App/
 
 ### Criterios de aceptación (verificar antes de Fase 2)
 
-- [ ] `docker compose up` levanta postgres sano; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
+- [ ] PostgreSQL local sano; `npx prisma migrate deploy && npx prisma db seed` corre sin errores.
 - [ ] **Prueba SQL de RLS**: conectado como `app_user`, tras `SELECT set_config('app.tenant_id', '<uuid-acme>', false); set_config('app.role','client_user',false);`, un `SELECT * FROM call_reports` (sin WHERE) devuelve **solo** filas de Acme. Cambiando el setting a Globex, solo Globex. Sin settings, **cero filas**.
 - [ ] Como `app_user`, `UPDATE audit_logs ...` y `DELETE FROM audit_logs` fallan con error de permisos.
 - [ ] `npx expo start` en `apps/mobile` abre la app placeholder en Expo Go.
@@ -128,7 +127,7 @@ Ricardo App/
 2. **AuditModule (backend)**: interceptor global que tras cada mutación exitosa escribe en `audit_logs` (usuario, acción, entidad, diff antes/después, IP desde `X-Forwarded-For`/socket). Se activa desde esta fase para que TODO el CRUD quede auditado.
 3. **Scaffold admin-web** (`apps/admin-web`): Vite + React + TS, React Router, TanStack Query, login contra `/auth/login` (solo staff), layout con navegación lateral.
 4. **Pantallas**: listado+formulario para Tenants, Usuarios, Campañas (con tabs de tipificaciones y agentes asignados). Tablas con búsqueda y paginación server-side.
-5. Agregar `admin-web` a `docker-compose.yml` (build estático servido por nginx).
+5. Servir `admin-web` con `vite build` + un servidor estático simple para desarrollo/demo (sin Docker por ahora).
 
 ### Criterios de aceptación
 
@@ -263,7 +262,7 @@ Ricardo App/
 2. **Robustez**: manejo global de excepciones con respuestas consistentes en español, logging estructurado (pino) con request-id, healthcheck `GET /health`, backups automatizados de postgres (script `pg_dump` + documentación de restauración).
 3. **Pruebas finales**: suite e2e completa verde en CI (GitHub Actions: lint + test + build de los tres apps); prueba de humo del flujo completo de los tres roles siguiendo la sección "Verificación" del plan aprobado.
 4. **Publicación móvil**: configurar EAS Build (perfiles dev/preview/production), íconos y splash, `app.json` con bundle IDs, builds firmados para Play Store y App Store, notas para la revisión de Apple (cuentas demo de cada rol).
-5. **Despliegue**: `docker-compose.prod.yml` (api + admin-web tras nginx con TLS vía Let's Encrypt, postgres con volumen respaldado); documentar en `README.md` el despliegue en un VPS o PaaS, variables de entorno y el procedimiento de migración.
+5. **Despliegue**: definir en esta fase si conviene retomar Docker (p.ej. `docker-compose.prod.yml` con api + admin-web tras nginx con TLS vía Let's Encrypt, postgres con volumen respaldado) o desplegar directo en un VPS/PaaS sin contenedores; documentar en `README.md` la opción elegida, variables de entorno y el procedimiento de migración.
 6. **Datos demo pulidos** para la presentación al cliente final.
 
 ### Criterios de aceptación

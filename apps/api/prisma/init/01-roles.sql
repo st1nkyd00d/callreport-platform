@@ -1,17 +1,13 @@
 -- apps/api/prisma/init/01-roles.sql
 --
--- Se ejecuta UNA sola vez: automáticamente, la primera vez que el
--- contenedor de postgres inicializa un volumen de datos VACÍO
--- (convención docker-entrypoint-initdb.d; los archivos se ejecutan en
--- orden alfabético). Corre como el superusuario POSTGRES_USER definido
--- en docker-compose.yml.
+-- Correr UNA sola vez, a mano, contra el PostgreSQL local (16+) usado
+-- para desarrollo, como superusuario (p.ej. `psql -U postgres -d
+-- callreport -f apps/api/prisma/init/01-roles.sql`). No se ejecuta
+-- automáticamente -- no hay contenedor Docker que lo dispare por ahora
+-- (ver git log si vuelve a agregarse docker-compose.yml en el futuro).
 --
--- GOTCHA OPERATIVO: si ya existe un volumen `postgres_data` de un
--- `docker compose up` previo (p.ej. de antes de agregar este archivo),
--- este script NO se ejecuta automáticamente -- los scripts de init solo
--- corren contra un volumen nuevo. Si aparece "role app_user does not
--- exist", hace falta `docker compose down -v` una vez para recrear el
--- volumen, o correr este archivo a mano vía psql.
+-- Si aparece "role app_user does not exist" es porque este script
+-- todavía no corrió contra la base local.
 --
 -- Crea los dos roles no-superusuario de los que depende el resto de la
 -- Fase 1:
