@@ -242,6 +242,10 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+// Fase 6: revokedAt es baja lógica (app_user nunca tiene GRANT DELETE, ver
+// 01-roles.sql), mismo criterio que RefreshToken.revokedAt/CampaignAgent.isActive/
+// Shift.endedAt. Re-registrar el mismo token (mismo dispositivo, quizás otro
+// usuario) hace upsert: reactiva la fila y reasigna userId en vez de duplicar.
 model PushToken {
   id         String    @id @default(uuid())
   userId     String    @map("user_id")
@@ -249,6 +253,7 @@ model PushToken {
   platform   String
   createdAt  DateTime  @default(now()) @map("created_at")
   lastUsedAt DateTime? @map("last_used_at")
+  revokedAt  DateTime? @map("revoked_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

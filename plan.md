@@ -223,10 +223,10 @@ Ricardo App/
 
 ### Criterios de aceptación
 
-- [ ] En **dispositivo físico** con la app cerrada: crear reporte → llega push al cliente en segundos; tocarla abre el detalle correcto. Un reporte con "Seguimiento Pendiente" también notifica al supervisor.
-- [ ] Un token inválido simulado se elimina de `push_tokens` tras procesar receipts.
-- [ ] Flujo de seguimiento completo: aparece en pendientes → resolver → pasa a resueltos con quién y cuándo → registrado en `audit_logs` → el badge se actualiza en tiempo real.
-- [ ] Métricas contrastadas a mano contra el seed (una consulta SQL de control por gráfico).
+- [ ] En **dispositivo físico** con la app cerrada: crear reporte → llega push al cliente en segundos; tocarla abre el detalle correcto. Un reporte con "Seguimiento Pendiente" también notifica al supervisor. (No verificable en esta sesión: `getExpoPushTokenAsync()` exige un `projectId` de EAS real, hoy vacío en `app.json`, y desde el SDK 53 Expo Go ya no entrega push remoto -- hace falta `eas init` + un development build, ambos pasos manuales de Fase 8. Sí verificado con test e2e: targeting correcto -- `client_user` del tenant siempre, supervisores solo si `requiresFollowup` -- y deep link probado con notificación local en Expo Go; ver `PROGRESS.md`.)
+- [x] Un token inválido simulado se elimina de `push_tokens` tras procesar receipts. (Baja lógica vía `revokedAt`, no `DELETE` -- `app_user` nunca tiene ese grant. Verificado con test e2e llamando `NotificationsService.checkReceipts()` directo con un receipt `DeviceNotRegistered` simulado.)
+- [x] Flujo de seguimiento completo: aparece en pendientes → resolver → pasa a resueltos con quién y cuándo → registrado en `audit_logs` → el badge se actualiza en tiempo real. (Verificado con test e2e de punta a punta incluyendo el socket `followup.resolved`; el badge del tab en el móvil consume la misma invalidación de queries que el resto del dashboard -- ver `PROGRESS.md` para lo que falta de pasada manual.)
+- [x] Métricas contrastadas a mano contra el seed (una consulta SQL de control por gráfico). (`test/metrics.e2e-spec.ts`: total por agente, `byDisposition`, `byDay`, `byTenant`, `activeTenants`, `pendingFollowups` y `agentsOnShift` contrastados contra `count()`/`groupBy` de Prisma sobre el mismo rango.)
 
 ---
 

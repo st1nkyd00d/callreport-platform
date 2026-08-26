@@ -11,7 +11,7 @@ import { concatMap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Prisma } from '../../generated/prisma/client';
 import type { RequestUser } from '../common/request-user';
-import { AUDIT_ENTITY_KEY } from './audit-entity.decorator';
+import { AUDIT_ACTION_KEY, AUDIT_ENTITY_KEY } from './audit-entity.decorator';
 
 interface RequestWithUser extends Request {
   user?: RequestUser;
@@ -49,7 +49,11 @@ export class AuditInterceptor implements NestInterceptor {
     if (!entityType) return next.handle();
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const action = ACTION_BY_METHOD[request.method] ?? 'update';
+    const actionOverride = this.reflector.getAllAndOverride<string | undefined>(
+      AUDIT_ACTION_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    const action = actionOverride ?? ACTION_BY_METHOD[request.method] ?? 'update';
 
     return next.handle().pipe(
       concatMap(async (response: unknown) => {

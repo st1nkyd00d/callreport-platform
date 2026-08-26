@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
 import { useRetryQueue } from '@/lib/agent-queries';
+import { usePushRegistration } from '@/lib/use-push-registration';
 
 // Reintenta la cola offline (report-queue.ts) al entrar a la sección del
 // agente y cada vez que la app vuelve a primer plano -- plan.md Fase 4:
@@ -31,6 +32,7 @@ function useQueueAutoFlush() {
 export default function AgentTabsLayout() {
   const theme = useTheme();
   useQueueAutoFlush();
+  usePushRegistration();
 
   return (
     <Tabs

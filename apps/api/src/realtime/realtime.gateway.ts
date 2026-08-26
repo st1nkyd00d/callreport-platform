@@ -70,4 +70,15 @@ export class RealtimeGateway implements OnGatewayConnection {
       .to([`tenant:${report.tenantId}`, 'staff'])
       .emit('report.updated', report);
   }
+
+  // Fase 6: el badge de "Seguimientos" del dashboard del cliente se
+  // actualiza en tiempo real cuando alguien (cliente o staff) resuelve un
+  // seguimiento pendiente.
+  emitFollowupResolved(
+    report: { tenantId: string } & Record<string, unknown>,
+  ): void {
+    this.server
+      .to([`tenant:${report.tenantId}`, 'staff'])
+      .emit('followup.resolved', report);
+  }
 }

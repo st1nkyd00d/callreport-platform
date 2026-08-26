@@ -6,8 +6,16 @@ import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AuthProvider } from '@/lib/auth-context';
+import { useNotificationDeepLink } from '@/lib/use-notification-deep-link';
 
 SplashScreen.preventAutoHideAsync();
+
+// Separado de RootLayout porque useNotificationDeepLink() necesita
+// useAuth(), que solo existe DENTRO de <AuthProvider>.
+function AppNavigator() {
+  useNotificationDeepLink();
+  return <Stack screenOptions={{ headerShown: false }} />;
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -21,7 +29,7 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <AppNavigator />
         </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>

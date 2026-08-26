@@ -5,6 +5,9 @@ import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { FollowupsModule } from './followups/followups.module';
+import { MetricsModule } from './metrics/metrics.module';
+import { NotificationsModule } from './notifications/notifications.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RealtimeModule } from './realtime/realtime.module';
 import { ReportsModule } from './reports/reports.module';
@@ -19,6 +22,9 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     AuditModule,
     RealtimeModule,
+    NotificationsModule,
+    FollowupsModule,
+    MetricsModule,
     ReportsModule,
     ShiftsModule,
     TenantsModule,

@@ -3,8 +3,10 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { Role } from '../../generated/prisma/enums';
@@ -45,9 +47,12 @@ function daysAgo(days: number): Date {
 // reales, GET /reports/summary, GET /reports/:id y los emits de socket).
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeGateway,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // Filtros del dashboard del cliente (plan.md Fase 5): from/to/campaign/
@@ -247,6 +252,12 @@ export class ReportsService {
     // Emite DESPUÉS de que el INSERT confirmó (plan.md Fase 5): el socket
     // es mejora de experiencia, nunca la fuente de verdad del create.
     this.realtime.emitReportCreated(report);
+    // Fire-and-forget (plan.md Fase 6): una caída de la API de Expo nunca
+    // puede tumbar el 201 de un reporte ya confirmado en la base.
+    this.notifications.notifyReportCreated(report).catch((err: unknown) => {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(`Error notificando push para reporte ${report.id}: ${message}`);
+    });
     return report;
   }
 

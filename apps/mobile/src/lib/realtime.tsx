@@ -55,6 +55,11 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
       void queryClient.invalidateQueries({ queryKey: ['client-reports'] });
       void queryClient.invalidateQueries({ queryKey: ['reports-summary'] });
       void queryClient.invalidateQueries({ queryKey: ['upcoming-appointments'] });
+      // Fase 6: un reporte nuevo puede requerir seguimiento (badge del
+      // tab) y un seguimiento resuelto en otra sesión (p.ej. un
+      // supervisor desde admin-web) tiene que reflejarse acá también.
+      void queryClient.invalidateQueries({ queryKey: ['followups'] });
+      void queryClient.invalidateQueries({ queryKey: ['followups-count'] });
     }
 
     socket.on('connect', () => {
@@ -85,6 +90,7 @@ export function RealtimeProvider({ children }: PropsWithChildren) {
 
     socket.on('report.created', invalidateAll);
     socket.on('report.updated', invalidateAll);
+    socket.on('followup.resolved', invalidateAll);
 
     const appStateSub = AppState.addEventListener('change', (state) => {
       if (state === 'active') {

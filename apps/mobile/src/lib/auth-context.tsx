@@ -9,6 +9,7 @@ import {
 } from 'react';
 import * as api from './api-client';
 import { API_BASE_URL } from './api-config';
+import { unregisterPushToken } from './push';
 import { clearSession, loadSession, saveSession, type Session } from './session';
 
 interface AuthContextValue {
@@ -50,6 +51,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const logout = useCallback(async (): Promise<void> => {
     if (session) {
+      // Baja del token de push ANTES de limpiar la sesión local (D7,
+      // plan-fase-6.md): si no, el dispositivo seguiría recibiendo push
+      // del tenant/usuario anterior tras un logout/login cruzado.
+      await unregisterPushToken(session.accessToken);
       await api.logoutRequest(session.accessToken, session.refreshToken);
     }
     await clearSession();

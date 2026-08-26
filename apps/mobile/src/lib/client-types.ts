@@ -22,6 +22,8 @@ export interface ClientReport {
   notes: string | null;
   scheduledAt: string | null;
   detailText: string | null;
+  followupResolvedAt: string | null;
+  followupResolvedBy: string | null;
   createdAt: string;
   updatedAt: string;
   disposition: Disposition;
@@ -32,6 +34,13 @@ export interface ClientReport {
 export interface ReportsPage {
   items: ClientReport[];
   nextCursor: string | null;
+}
+
+// Cola de seguimientos (plan.md Fase 6).
+export type FollowupStatus = 'pending' | 'resolved';
+
+export interface FollowupsCount {
+  pending: number;
 }
 
 export interface DispositionSummary {

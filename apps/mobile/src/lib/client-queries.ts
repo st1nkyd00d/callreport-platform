@@ -1,10 +1,12 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { authJson } from './api-json';
 import { useAuth } from './auth-context';
 import type {
   ClientCampaign,
   ClientReport,
   Disposition,
+  FollowupsCount,
+  FollowupStatus,
   ReportFilters,
   ReportsPage,
   ReportsSummary,
@@ -91,5 +93,50 @@ export function useReportDetail(id: string | null) {
     queryKey: ['report-detail', id],
     queryFn: () => authJson<ClientReport>(authFetch, 'GET', `/reports/${id}`),
     enabled: !!id,
+  });
+}
+
+// Cola de seguimientos (plan.md Fase 6): mismo patrón de paginación por
+// cursor que useClientReports.
+export function useFollowups(status: FollowupStatus) {
+  const { authFetch } = useAuth();
+  return useInfiniteQuery({
+    queryKey: ['followups', status],
+    queryFn: ({ pageParam }: { pageParam: string | null }) =>
+      authJson<ReportsPage>(
+        authFetch,
+        'GET',
+        `/followups?status=${status}${pageParam ? `&after=${pageParam}` : ''}`,
+      ),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
+  });
+}
+
+// Badge del tab "Seguimientos".
+export function useFollowupsCount() {
+  const { authFetch } = useAuth();
+  return useQuery({
+    queryKey: ['followups-count'],
+    queryFn: () => authJson<FollowupsCount>(authFetch, 'GET', '/followups/count'),
+    // El badge no necesita ser instantáneo -- se refresca solo (igual que
+    // el resto del dashboard) al reconectar el socket o volver a
+    // primer plano (ver realtime.tsx), esto es solo el piso mientras
+    // tanto.
+    refetchInterval: 60_000,
+  });
+}
+
+export function useResolveFollowup() {
+  const { authFetch } = useAuth();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (reportId: string) =>
+      authJson<ClientReport>(authFetch, 'POST', `/followups/${reportId}/resolve`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['followups'] });
+      void queryClient.invalidateQueries({ queryKey: ['followups-count'] });
+      void queryClient.invalidateQueries({ queryKey: ['client-reports'] });
+    },
   });
 }
