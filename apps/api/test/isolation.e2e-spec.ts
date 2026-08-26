@@ -58,9 +58,9 @@ describe('Aislamiento multi-tenant (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
 
-      expect(res.body.length).toBeGreaterThan(0);
+      expect(res.body.items.length).toBeGreaterThan(0);
       expect(
-        res.body.every(
+        res.body.items.every(
           (r: { tenantId: string }) => r.tenantId === user.tenantId,
         ),
       ).toBe(true);
@@ -73,7 +73,7 @@ describe('Aislamiento multi-tenant (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect(
-        forced.body.every(
+        forced.body.items.every(
           (r: { tenantId: string }) => r.tenantId === user.tenantId,
         ),
       ).toBe(true);

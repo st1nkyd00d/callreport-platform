@@ -2,12 +2,14 @@ import { Module } from '@nestjs/common';
 import { AgentCampaignsController } from './agent-campaigns.controller';
 import { CampaignsController } from './campaigns.controller';
 import { CampaignsService } from './campaigns.service';
+import { ClientCampaignsController } from './client-campaigns.controller';
 import { DispositionsController } from './dispositions.controller';
 
 @Module({
   controllers: [
     CampaignsController,
     AgentCampaignsController,
+    ClientCampaignsController,
     DispositionsController,
   ],
   providers: [CampaignsService],

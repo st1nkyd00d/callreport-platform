@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useState, type PropsWithChildren } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type PropsWithChildren,
+} from 'react';
 import * as api from './api-client';
 import { API_BASE_URL } from './api-config';
 import { clearSession, loadSession, saveSession, type Session } from './session';
@@ -14,6 +22,11 @@ interface AuthContextValue {
   // falla (refresh token vencido/revocado), cierra la sesión local para
   // forzar un login nuevo.
   authFetch: (path: string, init?: RequestInit) => Promise<Response>;
+  // Fase 5: el socket del dashboard del cliente (realtime.tsx) también
+  // necesita refrescar el access token cuando el handshake falla por
+  // token vencido (dura 15 min) -- comparte esta misma lógica en vez de
+  // duplicarla.
+  refreshAccessToken: () => Promise<string>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,46 +41,65 @@ export function AuthProvider({ children }: PropsWithChildren) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  async function login(email: string, password: string): Promise<Session> {
+  const login = useCallback(async (email: string, password: string): Promise<Session> => {
     const next = await api.login(email, password);
     await saveSession(next);
     setSession(next);
     return next;
-  }
+  }, []);
 
-  async function logout(): Promise<void> {
+  const logout = useCallback(async (): Promise<void> => {
     if (session) {
       await api.logoutRequest(session.accessToken, session.refreshToken);
     }
     await clearSession();
     setSession(null);
-  }
+  }, [session]);
 
-  async function authFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  // Extraído de authFetch para que el socket (realtime.tsx) pueda
+  // refrescar el access token sin pasar por un fetch HTTP: el handshake
+  // de socket.io no tiene un "401" que interceptar, así que llama esto
+  // directo desde su handler de connect_error. useCallback (dependiente
+  // solo de `session`) le da identidad estable entre renders -- si no,
+  // el useEffect de realtime.tsx que la usa como dependencia se
+  // reengancharía en cada render de este provider.
+  const refreshAccessToken = useCallback(async (): Promise<string> => {
     if (!session) throw new Error('No hay sesión activa');
+    const refreshed = await api.refreshSession(session.refreshToken);
+    const next: Session = { ...session, ...refreshed };
+    await saveSession(next);
+    setSession(next);
+    return refreshed.accessToken;
+  }, [session]);
 
-    const withAuth = (token: string): RequestInit => ({
-      ...init,
-      headers: { ...init.headers, Authorization: `Bearer ${token}` },
-    });
+  const authFetch = useCallback(
+    async (path: string, init: RequestInit = {}): Promise<Response> => {
+      if (!session) throw new Error('No hay sesión activa');
 
-    const res = await fetch(`${API_BASE_URL}${path}`, withAuth(session.accessToken));
-    if (res.status !== 401) return res;
+      const withAuth = (token: string): RequestInit => ({
+        ...init,
+        headers: { ...init.headers, Authorization: `Bearer ${token}` },
+      });
 
-    try {
-      const refreshed = await api.refreshSession(session.refreshToken);
-      const next: Session = { ...session, ...refreshed };
-      await saveSession(next);
-      setSession(next);
-      return await fetch(`${API_BASE_URL}${path}`, withAuth(refreshed.accessToken));
-    } catch {
-      await clearSession();
-      setSession(null);
-      return res;
-    }
-  }
+      const res = await fetch(`${API_BASE_URL}${path}`, withAuth(session.accessToken));
+      if (res.status !== 401) return res;
 
-  const value: AuthContextValue = { session, isLoading, login, logout, authFetch };
+      try {
+        const accessToken = await refreshAccessToken();
+        return await fetch(`${API_BASE_URL}${path}`, withAuth(accessToken));
+      } catch {
+        await clearSession();
+        setSession(null);
+        return res;
+      }
+    },
+    [session, refreshAccessToken],
+  );
+
+  const value: AuthContextValue = useMemo(
+    () => ({ session, isLoading, login, logout, authFetch, refreshAccessToken }),
+    [session, isLoading, login, logout, authFetch, refreshAccessToken],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

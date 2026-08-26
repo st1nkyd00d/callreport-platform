@@ -142,6 +142,28 @@ export class CampaignsService {
     });
   }
 
+  // Fase 5: campañas del tenant del cliente autenticado, para el
+  // selector de filtro y el nombre del tenant en el header del
+  // dashboard (todas comparten el mismo tenant, RLS ya lo garantiza).
+  findAllForClient(user: RequestUser) {
+    return this.prisma.forUser(user).campaign.findMany({
+      where: { status: 'active' },
+      select: { id: true, name: true, tenant: { select: { name: true } } },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  // Fase 5: todas las tipificaciones activas visibles para el tenant del
+  // cliente (de todas sus campañas), para agrupar los chips de filtro por
+  // `code` en el móvil -- RLS (dispositions_client_select) ya limita a
+  // las campañas del tenant.
+  listTenantDispositions(user: RequestUser) {
+    return this.prisma.forUser(user).disposition.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
   // Fase 4: tipificaciones activas de una campaña, para el agente
   // (formulario de reporte) y el cliente (Fase 5). Sin @Roles en el
   // controller -- RLS ya resuelve qué campañas puede ver cada rol; un

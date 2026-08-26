@@ -6,21 +6,29 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { Role } from '../../generated/prisma/enums';
+import type { Prisma } from '../../generated/prisma/client';
 import type { RequestUser } from '../common/request-user';
 import type { CreateReportDto } from './dto/create-report.dto';
 import type { UpdateReportDto } from './dto/update-report.dto';
 
-interface Pagination {
-  take: number;
-  skip: number;
-}
-
 type ReportRange = 'today' | 'week';
+
+export interface ReportFilters {
+  from?: Date;
+  to?: Date;
+  campaignId?: string;
+  dispositionIds?: string[];
+  scheduledFrom?: Date;
+  after?: string;
+  limit: number;
+}
 
 const REPORT_INCLUDE = {
   disposition: true,
   campaign: { select: { id: true, name: true } },
+  agent: { select: { id: true, fullName: true } },
 } as const;
 
 function startOfToday(): Date {
@@ -33,21 +41,116 @@ function daysAgo(days: number): Date {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 }
 
-// Endpoint de humo de la Fase 2 (plan.md, tarea 4): existe solo para
-// probar el aislamiento RLS end-to-end vía forUser(). La paginación por
-// cursor y los filtros reales (from/to/disposition/campaign) llegan en
-// la Fase 5 junto con el resto de GET /reports.
+// Fase 4 (endpoint de humo, plan.md Fase 2) + Fase 5 (filtros/cursor
+// reales, GET /reports/summary, GET /reports/:id y los emits de socket).
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly realtime: RealtimeGateway,
+  ) {}
 
-  findAll(user: RequestUser, pagination: Pagination) {
+  // Filtros del dashboard del cliente (plan.md Fase 5): from/to/campaign/
+  // disposition + cursor por id (createdAt no es único, Prisma exige un
+  // campo único para `cursor`). RLS ya limita las filas al tenant/rol de
+  // `user` -- este where solo agrega los filtros que pidió el cliente.
+  async findAll(user: RequestUser, filters: ReportFilters) {
+    const where: Prisma.CallReportWhereInput = {};
+    if (filters.from || filters.to) {
+      where.createdAt = {};
+      if (filters.from) where.createdAt.gte = filters.from;
+      if (filters.to) where.createdAt.lte = filters.to;
+    }
+    if (filters.campaignId) where.campaignId = filters.campaignId;
+    if (filters.dispositionIds?.length) {
+      where.dispositionId = { in: filters.dispositionIds };
+    }
+    if (filters.scheduledFrom) {
+      where.scheduledAt = { gte: filters.scheduledFrom };
+    }
+
+    // "Próximas citas" (scheduledFrom, sin cursor -- el carrusel del
+    // dashboard pide una sola página de 10) ordena por la cita más
+    // próxima primero, no por creación: el feed normal sí quiere
+    // createdAt desc, pero para citas eso mostraría la última cargada,
+    // no la más urgente.
+    const orderBy: Prisma.CallReportOrderByWithRelationInput[] = filters.scheduledFrom
+      ? [{ scheduledAt: 'asc' }, { id: 'asc' }]
+      : [{ createdAt: 'desc' }, { id: 'desc' }];
+
     const db = this.prisma.forUser(user);
-    return db.callReport.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: pagination.take,
-      skip: pagination.skip,
+    const rows = await db.callReport.findMany({
+      where,
+      orderBy,
+      take: filters.limit + 1,
+      ...(filters.after ? { cursor: { id: filters.after }, skip: 1 } : {}),
+      include: REPORT_INCLUDE,
     });
+
+    const hasMore = rows.length > filters.limit;
+    const items = hasMore ? rows.slice(0, filters.limit) : rows;
+    return {
+      items,
+      nextCursor: hasMore ? items[items.length - 1].id : null,
+    };
+  }
+
+  // Tarjetas KPI del dashboard (plan.md Fase 5). groupBy sí pasa por el
+  // interceptor de forUser() (tiene `model`), a diferencia de $queryRaw
+  // (ver prisma.service.ts: la rama `if (!model)` no fija los GUC de RLS
+  // -- una raw query acá devolvería cero filas sin contexto de tenant).
+  async summary(
+    user: RequestUser,
+    filters: Omit<ReportFilters, 'after' | 'limit'>,
+  ) {
+    const where: Prisma.CallReportWhereInput = {};
+    if (filters.from || filters.to) {
+      where.createdAt = {};
+      if (filters.from) where.createdAt.gte = filters.from;
+      if (filters.to) where.createdAt.lte = filters.to;
+    }
+    if (filters.campaignId) where.campaignId = filters.campaignId;
+    if (filters.dispositionIds?.length) {
+      where.dispositionId = { in: filters.dispositionIds };
+    }
+
+    const db = this.prisma.forUser(user);
+    const grouped = await db.callReport.groupBy({
+      by: ['dispositionId'],
+      where,
+      _count: { _all: true },
+    });
+
+    const dispositionIds = grouped.map((g) => g.dispositionId);
+    const dispositions = dispositionIds.length
+      ? await db.disposition.findMany({ where: { id: { in: dispositionIds } } })
+      : [];
+    const byId = new Map(dispositions.map((d) => [d.id, d]));
+
+    const byDisposition = grouped.map((g) => {
+      const d = byId.get(g.dispositionId);
+      return {
+        dispositionId: g.dispositionId,
+        code: d?.code ?? null,
+        label: d?.label ?? 'Desconocida',
+        color: d?.color ?? null,
+        count: g._count._all,
+      };
+    });
+
+    return {
+      total: byDisposition.reduce((sum, d) => sum + d.count, 0),
+      byDisposition,
+    };
+  }
+
+  async findOne(user: RequestUser, id: string) {
+    const report = await this.prisma.forUser(user).callReport.findUnique({
+      where: { id },
+      include: REPORT_INCLUDE,
+    });
+    if (!report) throw new NotFoundException('Reporte no encontrado');
+    return report;
   }
 
   // Fase 4: reportes propios del agente, para "Mis reportes de hoy/esta
@@ -122,7 +225,7 @@ export class ReportsService {
       );
     }
 
-    return db.callReport.create({
+    const report = await db.callReport.create({
       data: {
         tenantId: campaign.tenantId,
         campaignId: campaign.id,
@@ -141,6 +244,10 @@ export class ReportsService {
       },
       include: REPORT_INCLUDE,
     });
+    // Emite DESPUÉS de que el INSERT confirmó (plan.md Fase 5): el socket
+    // es mejora de experiencia, nunca la fuente de verdad del create.
+    this.realtime.emitReportCreated(report);
+    return report;
   }
 
   async update(user: RequestUser, id: string, dto: UpdateReportDto) {
@@ -189,7 +296,7 @@ export class ReportsService {
       requiresDetail = disposition.requiresDetail;
     }
 
-    return db.callReport.update({
+    const updated = await db.callReport.update({
       where: { id },
       data: {
         contactName: dto.contactName,
@@ -205,5 +312,7 @@ export class ReportsService {
       },
       include: REPORT_INCLUDE,
     });
+    this.realtime.emitReportUpdated(updated);
+    return updated;
   }
 }
