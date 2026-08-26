@@ -65,3 +65,32 @@ Registro de qué fase de `plan.md` está completa, qué falta y notas operativas
   - El motor de queries "client" (WASM) de Prisma 7.9 usa `import()` dinámico, que Jest bloquea por defecto (`--experimental-vm-modules`). Se agregó `cross-env` como dependencia y el script `test:e2e` ahora corre con `NODE_OPTIONS=--experimental-vm-modules`.
 - Contraseña de todos los usuarios del seed (Fase 1): `Password123!`.
 - `JWT_ACCESS_SECRET` ya está en `apps/api/.env` (generado local, no commiteado); `apps/api/.env.example` documenta cómo regenerarlo.
+
+---
+
+## FASE 3 — Panel web de administración (CRUD)
+
+**Estado: completa** (2026-08-26)
+
+### Qué se hizo
+
+- **Backend**: `TenantsModule`, `UsersModule`, `CampaignsModule` (`apps/api/src/{tenants,users,campaigns}`) con CRUD real bajo `/admin/*`, todos vía `PrismaService.forUser()`. Creación/borrado de tenants y usuarios restringido a `super_admin` (`@Roles` de método pisa al de clase); campañas/tipificaciones/asignación de agentes también editables por `supervisor`, como pide `plan.md`.
+- **AuditModule** (`apps/api/src/audit/`): `@AuditEntity('X')` + `AuditInterceptor` global escribe en `audit_logs` (usuario, acción, entityId, diff superficial del body, IP) tras cada mutación exitosa, esperando el insert antes de responder (no hace falta un endpoint de lectura de auditoría para Fase 3 — eso es Fase 7).
+- **`campaign_agents` ahora tiene `is_active`** (migración `campaign_agents_soft_remove`): desasignar un agente es un `UPDATE`, no un `DELETE` — ver "Notas operativas" abajo, es la misma razón por la que no hay endpoint de borrado de tipificaciones (`DELETE /admin/campaigns/:id/dispositions/:id`), solo `PATCH { isActive: false }`.
+- `apps/api/src/campaigns/default-dispositions.ts` consolida el set de 8 tipificaciones por defecto (antes duplicado inline en `prisma/seed.ts`); lo usan tanto `CampaignsService.create()` como el seed.
+- **Frontend**: nueva capa `apps/admin-web/src/api/` (sesión real en `localStorage`, `authFetch` con reintento-en-401, hooks TanStack Query) — mismo patrón que `apps/mobile/src/lib/`. `AdminLoginPage` + `AdminAuthGate` protegen `/admin/*`; `ClientesPage`, `UsuariosPage`, `CampanasPage`, `CampanaDetallePage` dejan de usar el `AppStore` mock y hablan con el API real.
+- `test/admin-crud.e2e-spec.ts` (nuevo): flujo completo tenant → campaña (8 dispositions) → editar 3 → 2 agentes → asignación → client_user, cada mutación verificada en `audit_logs`, y 403 de supervisor creando tenant. `test/isolation.e2e-spec.ts` actualizado (`/admin/ping` ya no existe, ahora prueba con `/admin/tenants`).
+
+### Qué quedó pendiente / deferido
+
+- `MetricasPage`, `TurnosPage`, `AuditoriaPage` y todo `/mobile/*` (prototipos Stitch AI) siguen sobre el `AppStore` mock — están fuera de alcance de Fase 3 (Métricas es Fase 6, el visor de auditoría real es Fase 7; los mocks de `/mobile/*` son referencia de diseño para la app Expo real, no producción).
+- CORS del API abierto (`app.enableCors()` sin restricción de origen) — Fase 8 tiene la tarea explícita de restringirlo al dominio real de `admin-web`.
+- No se probó a mano en un navegador real con clicks (sin GUI disponible en esta sesión): se verificó en su lugar (a) la suite e2e completa contra Neon, (b) `tsc -b` + `vite build` limpios en `admin-web`, y (c) el flujo real login → `GET /admin/tenants` vía `curl` con el `Origin` del dev server de Vite, confirmando CORS y auth de punta a punta. Recomendable una pasada manual en Chrome/Firefox antes de dar Fase 3 por verificada al 100%.
+- `ClientesPage` perdió la columna "Reportes este mes" (dependía del mock de `CallReport`; no hay endpoint agregado de reportes por tenant todavía — llega con Fase 5/6).
+
+### Notas operativas
+
+- **`app_user` nunca tiene `GRANT DELETE`** en ninguna tabla (ver `prisma/init/01-roles.sql`: "la aplicación nunca borra filas físicamente, usa flags de estado en su lugar") — esto rompió el diseño inicial de `PUT /admin/campaigns/:id/agents` (usaba `deleteMany`) y de un endpoint `DELETE` de tipificaciones que se había planeado. Ambos se rediseñaron sin ningún `DELETE`/`.delete()`/`.deleteMany()`: asignar agentes es upsert + `updateMany({isActive:false})`, "borrar" una tipificación es `PATCH {isActive:false}`. Si una fase futura necesita un hard-delete real de algo, hay que revisar primero si `01-roles.sql` debe cambiar (impacto amplio, pensarlo dos veces).
+- `forUser()` corre cada operación en su propia transacción (no se puede meter un create de dos modelos relacionados en un único `$transaction` sin saltarse el contexto RLS) — por eso `UsersService.create()` y `CampaignsService.create()` **validan la existencia del tenant ANTES** de crear la fila principal, en vez de crear-y-compensar-con-delete-si-falla (que tampoco sería posible sin `GRANT DELETE`).
+- Contraseña inicial de usuarios creados desde `UsuariosPage` la define quien los crea (campo nuevo en el formulario) — no hay generación automática ni email de bienvenida (fuera de alcance).
+- Sesión de `admin-web` en `localStorage` (`callreport.admin.session`), separada de la sesión mock de `AppStore`/`RoleSwitcher`.

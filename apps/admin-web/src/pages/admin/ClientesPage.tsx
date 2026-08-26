@@ -5,41 +5,64 @@ import { Pill } from '../../components/Pill';
 import { SlideOver } from '../../components/SlideOver';
 import { Toggle } from '../../components/Toggle';
 import { Toast } from '../../components/Toast';
-import { useStore } from '../../store/AppStore';
+import { useCampaigns } from '../../api/campaigns';
+import { useCreateTenant, useTenants, useUpdateTenant } from '../../api/tenants';
+import { useUsers } from '../../api/users';
+import { ApiError } from '../../api/client';
 
 export function ClientesPage() {
-  const { state, createTenant, updateTenant } = useStore();
+  const tenantsQuery = useTenants();
+  const campaignsQuery = useCampaigns();
+  const usersQuery = useUsers();
+  const createTenant = useCreateTenant();
+  const updateTenant = useUpdateTenant();
+
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', editWindowMinutes: 30, active: true });
 
+  const tenants = tenantsQuery.data ?? [];
+  const campaigns = campaignsQuery.data ?? [];
+  const users = usersQuery.data ?? [];
+
   const rows = useMemo(() => {
-    return state.tenants
+    return tenants
       .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
-      .map((t) => {
-        const campañas = state.campaigns.filter((c) => c.tenantId === t.id);
-        const usuarios = state.users.filter((u) => u.tenantId === t.id);
-        const reportesMes = state.reports.filter((r) => {
-          const d = new Date(r.createdAt);
-          const now = new Date();
-          return r.tenantId === t.id && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        }).length;
-        return { tenant: t, campañas: campañas.length, usuarios: usuarios.length, reportesMes };
-      });
-  }, [state, search]);
+      .map((t) => ({
+        tenant: t,
+        campañas: campaigns.filter((c) => c.tenantId === t.id).length,
+        usuarios: users.filter((u) => u.tenantId === t.id).length,
+      }));
+  }, [tenants, campaigns, users, search]);
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!form.name.trim()) return;
-    createTenant({ name: form.name.trim(), status: form.active ? 'active' : 'suspended', editWindowMinutes: form.editWindowMinutes });
-    setForm({ name: '', editWindowMinutes: 30, active: true });
-    setOpen(false);
-    showToast('Empresa creada correctamente');
+    try {
+      await createTenant.mutateAsync({ name: form.name.trim(), editWindowMinutes: form.editWindowMinutes });
+      setForm({ name: '', editWindowMinutes: 30, active: true });
+      setOpen(false);
+      showToast('Empresa creada correctamente');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo crear la empresa');
+    }
+  }
+
+  async function handleToggleStatus(tenant: { id: string; name: string; status: string }) {
+    try {
+      await updateTenant.mutateAsync({
+        id: tenant.id,
+        patch: { status: tenant.status === 'active' ? 'suspended' : 'active' },
+      });
+      showToast(tenant.status === 'active' ? `${tenant.name} suspendida` : `${tenant.name} reactivada`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo actualizar la empresa');
+    }
   }
 
   return (
@@ -71,12 +94,11 @@ export function ClientesPage() {
                 <th className="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Estado</th>
                 <th className="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Campañas</th>
                 <th className="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Usuarios</th>
-                <th className="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase">Reportes este mes</th>
                 <th className="px-4 py-3 font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant">
-              {rows.map(({ tenant, campañas, usuarios, reportesMes }) => (
+              {rows.map(({ tenant, campañas, usuarios }) => (
                 <tr key={tenant.id} className="hover:bg-surface-container-low transition-colors h-12">
                   <td className="px-4 py-2 font-body-md text-body-md font-semibold text-on-surface">{tenant.name}</td>
                   <td className="px-4 py-2">
@@ -84,13 +106,9 @@ export function ClientesPage() {
                   </td>
                   <td className="px-4 py-2 font-body-md text-body-md">{campañas}</td>
                   <td className="px-4 py-2 font-body-md text-body-md">{usuarios}</td>
-                  <td className="px-4 py-2 font-body-md text-body-md">{reportesMes}</td>
                   <td className="px-4 py-2 text-right">
                     <button
-                      onClick={() => {
-                        updateTenant(tenant.id, { status: tenant.status === 'active' ? 'suspended' : 'active' });
-                        showToast(tenant.status === 'active' ? `${tenant.name} suspendida` : `${tenant.name} reactivada`);
-                      }}
+                      onClick={() => handleToggleStatus(tenant)}
                       className="text-on-surface-variant hover:text-primary transition-colors text-body-sm underline underline-offset-2"
                     >
                       {tenant.status === 'active' ? 'Suspender' : 'Reactivar'}
@@ -111,8 +129,8 @@ export function ClientesPage() {
               <button onClick={() => setOpen(false)} className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm hover:bg-surface-container transition-colors">
                 Cancelar
               </button>
-              <button onClick={handleSave} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors">
-                Guardar
+              <button onClick={handleSave} disabled={createTenant.isPending} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60">
+                {createTenant.isPending ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           }

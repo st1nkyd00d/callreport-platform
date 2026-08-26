@@ -88,7 +88,7 @@ describe('Aislamiento multi-tenant (e2e)', () => {
     it('client_user llamando un endpoint de admin -> 403', async () => {
       const { accessToken } = await login('client1@acmecorp.demo');
       await request(app.getHttpServer())
-        .get('/admin/ping')
+        .get('/admin/tenants')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(403);
     });
@@ -96,7 +96,7 @@ describe('Aislamiento multi-tenant (e2e)', () => {
     it('supervisor sí puede acceder a un endpoint de admin', async () => {
       const { accessToken } = await login('supervisor@callreport.demo');
       await request(app.getHttpServer())
-        .get('/admin/ping')
+        .get('/admin/tenants')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
     });

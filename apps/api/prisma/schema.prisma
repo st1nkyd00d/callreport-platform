@@ -117,10 +117,17 @@ model Campaign {
   @@map("campaigns")
 }
 
+// isActive en vez de borrar la fila al desasignar un agente: app_user
+// nunca recibe GRANT DELETE en ninguna tabla (ver
+// prisma/init/01-roles.sql -- "la aplicación nunca borra filas
+// físicamente, usa flags de estado"), mismo criterio que closedBy/endedAt
+// en Shift. Reasignar el mismo agente a la misma campaña reactiva la fila
+// existente (upsert) en vez de violar el @@unique de abajo.
 model CampaignAgent {
   id         String   @id @default(uuid())
   campaignId String   @map("campaign_id")
   userId     String   @map("user_id")
+  isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)

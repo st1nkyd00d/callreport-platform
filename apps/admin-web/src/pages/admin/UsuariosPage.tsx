@@ -5,7 +5,9 @@ import { Icon } from '../../components/Icon';
 import { Pill, type PillVariant } from '../../components/Pill';
 import { SlideOver } from '../../components/SlideOver';
 import { Toast } from '../../components/Toast';
-import { useStore } from '../../store/AppStore';
+import { useTenants } from '../../api/tenants';
+import { useCreateUser, useUpdateUser, useUsers } from '../../api/users';
+import { ApiError } from '../../api/client';
 import { relativeTime, initials } from '../../lib/format';
 
 const roleFilters: { label: string; value: Role | 'all' }[] = [
@@ -31,39 +33,66 @@ const statusVariant: Record<string, PillVariant> = { active: 'success', inactive
 const statusLabel: Record<string, string> = { active: 'Activo', inactive: 'Inactivo', blocked: 'Bloqueado' };
 
 export function UsuariosPage() {
-  const { state, createUser, updateUser } = useStore();
+  const usersQuery = useUsers();
+  const tenantsQuery = useTenants();
+  const createUser = useCreateUser();
+  const updateUser = useUpdateUser();
+
+  const users = usersQuery.data ?? [];
+  const tenants = tenantsQuery.data ?? [];
+
   const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [form, setForm] = useState<{ fullName: string; email: string; role: Role; tenantId: string }>({ fullName: '', email: '', role: 'agent', tenantId: state.tenants[0]?.id ?? '' });
+  const [form, setForm] = useState<{
+    fullName: string;
+    email: string;
+    password: string;
+    role: Role;
+    tenantId: string;
+  }>({ fullName: '', email: '', password: '', role: 'agent', tenantId: '' });
 
   const rows = useMemo(() => {
-    return state.users.filter((u) => {
+    return users.filter((u) => {
       const matchesRole = roleFilter === 'all' || u.role === roleFilter;
       const q = search.toLowerCase();
       const matchesSearch = !q || u.fullName.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
-  }, [state.users, roleFilter, search]);
+  }, [users, roleFilter, search]);
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2500);
   }
 
-  function handleSave() {
-    if (!form.fullName.trim() || !form.email.trim()) return;
-    createUser({
-      fullName: form.fullName.trim(),
-      email: form.email.trim(),
-      role: form.role,
-      status: 'active',
-      tenantId: form.role === 'client_user' ? form.tenantId : undefined,
-    });
-    setForm({ fullName: '', email: '', role: 'agent', tenantId: state.tenants[0]?.id ?? '' });
-    setOpen(false);
-    showToast('Usuario creado correctamente');
+  async function handleSave() {
+    if (!form.fullName.trim() || !form.email.trim() || form.password.length < 8) return;
+    try {
+      await createUser.mutateAsync({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        role: form.role,
+        tenantId: form.role === 'client_user' ? form.tenantId : undefined,
+      });
+      setForm({ fullName: '', email: '', password: '', role: 'agent', tenantId: tenants[0]?.id ?? '' });
+      setOpen(false);
+      showToast('Usuario creado correctamente');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo crear el usuario');
+    }
+  }
+
+  async function handleToggleStatus(u: { id: string; fullName: string; status: string }) {
+    const next = u.status === 'active' ? 'blocked' : 'active';
+    try {
+      await updateUser.mutateAsync({ id: u.id, patch: { status: next as 'active' | 'blocked' } });
+      showToast(next === 'active' ? `${u.fullName} reactivado` : `${u.fullName} bloqueado`);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo actualizar el usuario');
+    }
   }
 
   return (
@@ -74,7 +103,10 @@ export function UsuariosPage() {
             <p className="font-body-md text-body-md text-on-surface-variant">Gestiona el acceso y roles de todo el personal.</p>
           </div>
           <button
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setForm((f) => ({ ...f, tenantId: tenants[0]?.id ?? '' }));
+              setOpen(true);
+            }}
             className="bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md px-lg py-sm rounded-full flex items-center justify-center gap-sm transition-colors shadow-sm whitespace-nowrap"
           >
             <Icon name="add" className="text-[20px]" /> Nuevo usuario
@@ -116,7 +148,7 @@ export function UsuariosPage() {
                   <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase">Rol</th>
                   <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase">Empresa</th>
                   <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase">Estado</th>
-                  <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase">Último acceso</th>
+                  <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase">Creado</th>
                   <th className="px-md py-sm font-label-sm text-label-sm text-on-surface-variant uppercase text-right">Acciones</th>
                 </tr>
               </thead>
@@ -131,18 +163,14 @@ export function UsuariosPage() {
                     <td className="px-md py-sm">
                       <Pill variant={roleVariant[u.role]}>{roleLabel[u.role]}</Pill>
                     </td>
-                    <td className="px-md py-sm">{u.tenantId ? state.tenants.find((t) => t.id === u.tenantId)?.name : '—'}</td>
+                    <td className="px-md py-sm">{u.tenantId ? tenants.find((t) => t.id === u.tenantId)?.name : '—'}</td>
                     <td className="px-md py-sm">
                       <Pill variant={statusVariant[u.status]}>{statusLabel[u.status]}</Pill>
                     </td>
-                    <td className="px-md py-sm text-on-surface-variant">{u.lastAccessAt ? relativeTime(u.lastAccessAt) : '—'}</td>
+                    <td className="px-md py-sm text-on-surface-variant">{relativeTime(u.createdAt)}</td>
                     <td className="px-md py-sm text-right">
                       <button
-                        onClick={() => {
-                          const next = u.status === 'active' ? 'blocked' : 'active';
-                          updateUser(u.id, { status: next });
-                          showToast(next === 'active' ? `${u.fullName} reactivado` : `${u.fullName} bloqueado`);
-                        }}
+                        onClick={() => handleToggleStatus(u)}
                         className="text-outline hover:text-primary transition-colors p-1"
                         title={u.status === 'active' ? 'Bloquear' : 'Reactivar'}
                       >
@@ -155,7 +183,7 @@ export function UsuariosPage() {
             </table>
           </div>
           <div className="px-md py-sm border-t border-outline-variant bg-surface flex items-center justify-between">
-            <span className="font-body-sm text-body-sm text-on-surface-variant">Mostrando {rows.length} de {state.users.length} usuarios</span>
+            <span className="font-body-sm text-body-sm text-on-surface-variant">Mostrando {rows.length} de {users.length} usuarios</span>
           </div>
         </div>
 
@@ -168,8 +196,8 @@ export function UsuariosPage() {
               <button onClick={() => setOpen(false)} className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm hover:bg-surface-container transition-colors">
                 Cancelar
               </button>
-              <button onClick={handleSave} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors">
-                Guardar
+              <button onClick={handleSave} disabled={createUser.isPending} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60">
+                {createUser.isPending ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           }
@@ -183,6 +211,17 @@ export function UsuariosPage() {
             <input value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} type="email" className="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md" placeholder="nombre@empresa.com" />
           </div>
           <div className="flex flex-col gap-2">
+            <label className="font-label-md text-label-md text-on-surface">Contraseña inicial</label>
+            <input
+              value={form.password}
+              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+              type="password"
+              minLength={8}
+              className="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary font-body-md text-body-md"
+              placeholder="Mínimo 8 caracteres"
+            />
+          </div>
+          <div className="flex flex-col gap-2">
             <label className="font-label-md text-label-md text-on-surface">Rol</label>
             <select value={form.role} onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as Role }))} className="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest font-body-md text-body-md">
               <option value="agent">Agente</option>
@@ -194,7 +233,7 @@ export function UsuariosPage() {
             <div className="flex flex-col gap-2">
               <label className="font-label-md text-label-md text-on-surface">Empresa</label>
               <select value={form.tenantId} onChange={(e) => setForm((f) => ({ ...f, tenantId: e.target.value }))} className="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest font-body-md text-body-md">
-                {state.tenants.map((t) => (
+                {tenants.map((t) => (
                   <option key={t.id} value={t.id}>{t.name}</option>
                 ))}
               </select>

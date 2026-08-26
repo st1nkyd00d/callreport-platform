@@ -4,12 +4,32 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { Icon } from '../../components/Icon';
 import { Toggle } from '../../components/Toggle';
 import { Toast } from '../../components/Toast';
-import { useStore } from '../../store/AppStore';
+import {
+  useCampaigns,
+  useCreateDisposition,
+  useDispositions,
+  useSetCampaignAgents,
+  useUpdateCampaign,
+  useUpdateDisposition,
+} from '../../api/campaigns';
+import { useTenants } from '../../api/tenants';
+import { useUsers } from '../../api/users';
+import { ApiError } from '../../api/client';
 
 export function CampanaDetallePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { state, updateCampaign, updateDisposition, addDisposition, moveDisposition, toggleCampaignAgent } = useStore();
+
+  const campaignsQuery = useCampaigns();
+  const tenantsQuery = useTenants();
+  const dispositionsQuery = useDispositions(id ?? '');
+  const agentsQuery = useUsers('agent');
+
+  const updateCampaign = useUpdateCampaign();
+  const updateDisposition = useUpdateDisposition();
+  const createDisposition = useCreateDisposition();
+  const setCampaignAgents = useSetCampaignAgents();
+
   const [tab, setTab] = useState<'tipificaciones' | 'agentes'>('tipificaciones');
   const [toast, setToast] = useState<string | null>(null);
   const [newLabel, setNewLabel] = useState('');
@@ -17,8 +37,8 @@ export function CampanaDetallePage() {
   const [newRequiresDetail, setNewRequiresDetail] = useState(false);
   const [newRequiresSchedule, setNewRequiresSchedule] = useState(false);
 
-  const campaign = state.campaigns.find((c) => c.id === id);
-  const tenant = campaign ? state.tenants.find((t) => t.id === campaign.tenantId) : undefined;
+  const campaign = campaignsQuery.data?.find((c) => c.id === id);
+  const tenant = campaign ? tenantsQuery.data?.find((t) => t.id === campaign.tenantId) : undefined;
 
   if (!campaign || !tenant) {
     return (
@@ -28,12 +48,43 @@ export function CampanaDetallePage() {
     );
   }
 
-  const dispositions = state.dispositions.filter((d) => d.campaignId === campaign.id).sort((a, b) => a.sortOrder - b.sortOrder);
-  const agents = state.users.filter((u) => u.role === 'agent');
+  const dispositions = [...(dispositionsQuery.data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
+  const agents = agentsQuery.data ?? [];
 
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 2000);
+  }
+
+  async function handleUpdateDisposition(dispositionId: string, patch: Parameters<typeof updateDisposition.mutateAsync>[0]['patch']) {
+    try {
+      await updateDisposition.mutateAsync({ campaignId: campaign!.id, dispositionId, patch });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo actualizar la tipificación');
+    }
+  }
+
+  async function handleMoveDisposition(index: number, direction: 'up' | 'down') {
+    const swapWith = direction === 'up' ? index - 1 : index + 1;
+    if (swapWith < 0 || swapWith >= dispositions.length) return;
+    const a = dispositions[index];
+    const b = dispositions[swapWith];
+    await Promise.all([
+      updateDisposition.mutateAsync({ campaignId: campaign!.id, dispositionId: a.id, patch: { sortOrder: b.sortOrder } }),
+      updateDisposition.mutateAsync({ campaignId: campaign!.id, dispositionId: b.id, patch: { sortOrder: a.sortOrder } }),
+    ]);
+  }
+
+  async function handleToggleAgent(agentId: string) {
+    const assigned = campaign!.agentIds.includes(agentId);
+    const nextAgentIds = assigned
+      ? campaign!.agentIds.filter((a) => a !== agentId)
+      : [...campaign!.agentIds, agentId];
+    try {
+      await setCampaignAgents.mutateAsync({ campaignId: campaign!.id, agentIds: nextAgentIds });
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo actualizar la asignación');
+    }
   }
 
   return (
@@ -59,9 +110,13 @@ export function CampanaDetallePage() {
           <span className="font-label-md text-label-md text-on-background">Estado de campaña</span>
           <Toggle
             checked={campaign.status === 'active'}
-            onChange={(v) => {
-              updateCampaign(campaign.id, { status: v ? 'active' : 'paused' });
-              showToast(v ? 'Campaña activada' : 'Campaña pausada');
+            onChange={async (v) => {
+              try {
+                await updateCampaign.mutateAsync({ id: campaign.id, patch: { status: v ? 'active' : 'paused' } });
+                showToast(v ? 'Campaña activada' : 'Campaña pausada');
+              } catch (err) {
+                showToast(err instanceof ApiError ? err.message : 'No se pudo actualizar la campaña');
+              }
             }}
           />
         </div>
@@ -93,30 +148,30 @@ export function CampanaDetallePage() {
               {dispositions.map((d, idx) => (
                 <div key={d.id} className={`flex flex-col md:grid md:grid-cols-[48px_1fr_150px_120px_120px_100px] gap-sm md:gap-md items-start md:items-center p-md hover:bg-surface-bright transition-colors ${!d.isActive ? 'opacity-60' : ''}`}>
                   <div className="hidden md:flex flex-col gap-0.5">
-                    <button disabled={idx === 0} onClick={() => moveDisposition(campaign.id, d.id, 'up')} className="text-outline hover:text-primary disabled:opacity-30">
+                    <button disabled={idx === 0} onClick={() => handleMoveDisposition(idx, 'up')} className="text-outline hover:text-primary disabled:opacity-30">
                       <Icon name="keyboard_arrow_up" className="text-[18px]" />
                     </button>
-                    <button disabled={idx === dispositions.length - 1} onClick={() => moveDisposition(campaign.id, d.id, 'down')} className="text-outline hover:text-primary disabled:opacity-30">
+                    <button disabled={idx === dispositions.length - 1} onClick={() => handleMoveDisposition(idx, 'down')} className="text-outline hover:text-primary disabled:opacity-30">
                       <Icon name="keyboard_arrow_down" className="text-[18px]" />
                     </button>
                   </div>
                   <div className="font-label-md text-label-md text-on-background">{d.label}</div>
                   <div>
                     <label className="inline-flex items-center gap-xs cursor-pointer">
-                      <Toggle size="sm" checked={d.requiresFollowup} onChange={(v) => updateDisposition(d.id, { requiresFollowup: v })} />
+                      <Toggle size="sm" checked={d.requiresFollowup} onChange={(v) => handleUpdateDisposition(d.id, { requiresFollowup: v })} />
                       <span className={`font-label-sm text-label-sm ${d.requiresFollowup ? 'text-[#E65100]' : 'text-on-surface-variant'}`}>
                         {d.requiresFollowup ? 'Requiere seguimiento' : 'Sin seguimiento'}
                       </span>
                     </label>
                   </div>
                   <div>
-                    <Toggle size="sm" checked={d.requiresDetail} onChange={(v) => updateDisposition(d.id, { requiresDetail: v })} />
+                    <Toggle size="sm" checked={d.requiresDetail} onChange={(v) => handleUpdateDisposition(d.id, { requiresDetail: v })} />
                   </div>
                   <div>
-                    <Toggle size="sm" checked={d.requiresSchedule} onChange={(v) => updateDisposition(d.id, { requiresSchedule: v })} />
+                    <Toggle size="sm" checked={d.requiresSchedule} onChange={(v) => handleUpdateDisposition(d.id, { requiresSchedule: v })} />
                   </div>
                   <div className="flex items-center">
-                    <Toggle checked={d.isActive} onChange={(v) => updateDisposition(d.id, { isActive: v })} />
+                    <Toggle checked={d.isActive} onChange={(v) => handleUpdateDisposition(d.id, { isActive: v })} />
                   </div>
                 </div>
               ))}
@@ -142,19 +197,24 @@ export function CampanaDetallePage() {
                 <span className="font-label-sm text-label-sm text-on-surface-variant">Requiere fecha (cita)</span>
               </label>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!newLabel.trim()) return;
-                  addDisposition(campaign.id, {
-                    label: newLabel.trim(),
-                    requiresFollowup: newRequiresFollowup,
-                    requiresDetail: newRequiresDetail,
-                    requiresSchedule: newRequiresSchedule,
-                  });
-                  setNewLabel('');
-                  setNewRequiresFollowup(false);
-                  setNewRequiresDetail(false);
-                  setNewRequiresSchedule(false);
-                  showToast('Tipificación agregada');
+                  try {
+                    await createDisposition.mutateAsync({
+                      campaignId: campaign.id,
+                      label: newLabel.trim(),
+                      requiresFollowup: newRequiresFollowup,
+                      requiresDetail: newRequiresDetail,
+                      requiresSchedule: newRequiresSchedule,
+                    });
+                    setNewLabel('');
+                    setNewRequiresFollowup(false);
+                    setNewRequiresDetail(false);
+                    setNewRequiresSchedule(false);
+                    showToast('Tipificación agregada');
+                  } catch (err) {
+                    showToast(err instanceof ApiError ? err.message : 'No se pudo agregar la tipificación');
+                  }
                 }}
                 className="flex items-center gap-xs bg-primary text-on-primary px-md py-sm rounded-lg font-label-md text-label-md hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap md:ml-auto"
               >
@@ -181,7 +241,7 @@ export function CampanaDetallePage() {
                       <span className="font-body-sm text-body-sm text-on-surface-variant">{a.email}</span>
                     </div>
                   </div>
-                  <Toggle checked={assigned} onChange={() => toggleCampaignAgent(campaign.id, a.id)} />
+                  <Toggle checked={assigned} onChange={() => handleToggleAgent(a.id)} />
                 </label>
               );
             })}

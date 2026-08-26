@@ -3,6 +3,7 @@ import { Prisma, PrismaClient } from '../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import argon2 from 'argon2';
 import { randomUUID } from 'node:crypto';
+import { DEFAULT_DISPOSITIONS } from '../src/campaigns/default-dispositions';
 
 // Conecta con DATABASE_URL (rol `migrator`, BYPASSRLS — ver prisma/init/01-roles.sql).
 // No hace falta ningún set_config de sesión en este script: migrator no
@@ -38,21 +39,6 @@ function daysAgo(days: number, hour: number, minute: number): Date {
 function daysFromNow(days: number, hour: number, minute: number): Date {
   return daysAgo(-days, hour, minute);
 }
-
-// Mismo set que packages/shared/src/constants.ts (DEFAULT_DISPOSITIONS).
-// Copia standalone a propósito (ver comentario de mulberry32 arriba): este
-// script vive fuera de packages/shared. Si cambia una lista, actualizar
-// también la otra.
-const DEFAULT_DISPOSITIONS = [
-  { code: 'venta', label: 'Venta Completada', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'success', icon: 'check_circle' },
-  { code: 'cita', label: 'Cita Agendada', requiresFollowup: true, requiresDetail: false, requiresSchedule: true, color: 'teal', icon: 'event_available' },
-  { code: 'consulta', label: 'Consulta Resuelta', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'primary', icon: 'support_agent' },
-  { code: 'mensaje', label: 'Mensaje Tomado', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'warning', icon: 'sticky_note_2' },
-  { code: 'seguimiento', label: 'Seguimiento Pendiente', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'warning', icon: 'schedule' },
-  { code: 'reclamo', label: 'Reclamo / Queja', requiresFollowup: true, requiresDetail: false, requiresSchedule: false, color: 'error', icon: 'report_problem' },
-  { code: 'no_interesado', label: 'No Interesado', requiresFollowup: false, requiresDetail: false, requiresSchedule: false, color: 'neutral', icon: 'do_not_disturb' },
-  { code: 'otro', label: 'Otro', requiresFollowup: false, requiresDetail: true, requiresSchedule: false, color: 'purple', icon: 'more_horiz' },
-] as const;
 
 const DETAIL_POOL = [
   'Solicito hablar con un gerente.',

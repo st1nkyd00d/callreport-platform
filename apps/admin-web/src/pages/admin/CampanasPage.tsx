@@ -4,19 +4,37 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { Icon } from '../../components/Icon';
 import { Pill } from '../../components/Pill';
 import { SlideOver } from '../../components/SlideOver';
-import { useStore } from '../../store/AppStore';
+import { Toast } from '../../components/Toast';
+import { useCampaigns, useCreateCampaign } from '../../api/campaigns';
+import { useTenants } from '../../api/tenants';
+import { ApiError } from '../../api/client';
 
 export function CampanasPage() {
-  const { state, createCampaign } = useStore();
+  const campaignsQuery = useCampaigns();
+  const tenantsQuery = useTenants();
+  const createCampaign = useCreateCampaign();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', tenantId: state.tenants[0]?.id ?? '' });
+  const [toast, setToast] = useState<string | null>(null);
+  const [form, setForm] = useState({ name: '', tenantId: '' });
 
-  function handleSave() {
+  const campaigns = campaignsQuery.data ?? [];
+  const tenants = tenantsQuery.data ?? [];
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 2500);
+  }
+
+  async function handleSave() {
     if (!form.name.trim() || !form.tenantId) return;
-    createCampaign({ name: form.name.trim(), tenantId: form.tenantId, status: 'active' });
-    setForm({ name: '', tenantId: state.tenants[0]?.id ?? '' });
-    setOpen(false);
+    try {
+      await createCampaign.mutateAsync({ name: form.name.trim(), tenantId: form.tenantId });
+      setForm({ name: '', tenantId: tenants[0]?.id ?? '' });
+      setOpen(false);
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo crear la campaña');
+    }
   }
 
   return (
@@ -25,16 +43,18 @@ export function CampanasPage() {
         <div className="flex items-center justify-between mb-lg">
           <p className="font-body-md text-body-md text-on-surface-variant">Tipificaciones y agentes asignados por campaña.</p>
           <button
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setForm((f) => ({ ...f, tenantId: tenants[0]?.id ?? '' }));
+              setOpen(true);
+            }}
             className="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center gap-2"
           >
             <Icon name="add" className="text-[20px]" /> Nueva campaña
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-          {state.campaigns.map((c) => {
-            const tenant = state.tenants.find((t) => t.id === c.tenantId);
-            const dispositionsCount = state.dispositions.filter((d) => d.campaignId === c.id).length;
+          {campaigns.map((c) => {
+            const tenant = tenants.find((t) => t.id === c.tenantId);
             return (
               <button
                 key={c.id}
@@ -50,7 +70,7 @@ export function CampanasPage() {
                 </span>
                 <div className="flex items-center gap-md text-body-sm text-on-surface-variant font-body-sm mt-sm">
                   <span className="flex items-center gap-1"><Icon name="groups" className="text-[16px]" /> {c.agentIds.length} agentes</span>
-                  <span className="flex items-center gap-1"><Icon name="rule" className="text-[16px]" /> {dispositionsCount} tipificaciones</span>
+                  <span className="flex items-center gap-1"><Icon name="rule" className="text-[16px]" /> {c.dispositionsCount} tipificaciones</span>
                 </div>
               </button>
             );
@@ -66,8 +86,8 @@ export function CampanasPage() {
               <button onClick={() => setOpen(false)} className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface font-label-md text-label-md rounded shadow-sm hover:bg-surface-container transition-colors">
                 Cancelar
               </button>
-              <button onClick={handleSave} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors">
-                Guardar
+              <button onClick={handleSave} disabled={createCampaign.isPending} className="px-4 py-2 bg-primary text-on-primary font-label-md text-label-md rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors disabled:opacity-60">
+                {createCampaign.isPending ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           }
@@ -79,7 +99,7 @@ export function CampanasPage() {
           <div className="flex flex-col gap-2">
             <label className="font-label-md text-label-md text-on-surface">Empresa cliente</label>
             <select value={form.tenantId} onChange={(e) => setForm((f) => ({ ...f, tenantId: e.target.value }))} className="w-full px-3 py-2 border border-outline-variant rounded bg-surface-container-lowest font-body-md text-body-md">
-              {state.tenants.map((t) => (
+              {tenants.map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
@@ -87,6 +107,7 @@ export function CampanasPage() {
           <p className="font-body-sm text-body-sm text-on-surface-variant">Se crearán automáticamente las 8 tipificaciones por defecto (editables después).</p>
         </SlideOver>
       </div>
+      <Toast message={toast} />
     </AdminLayout>
   );
 }

@@ -132,10 +132,10 @@ Ricardo App/
 
 ### Criterios de aceptación
 
-- [ ] Flujo completo en el navegador: crear tenant nuevo → crear campaña → definir 3 tipificaciones → crear 2 agentes y asignarlos → crear client_user del tenant. Todo persiste tras recargar.
-- [ ] Cada mutación del flujo anterior aparece en `audit_logs` con usuario, diff e IP.
-- [ ] Un supervisor puede editar campañas pero no crear tenants (403 verificado).
-- [ ] Tests e2e de los endpoints CRUD principales (crear/editar/listar por rol).
+- [x] Flujo completo en el navegador: crear tenant nuevo → crear campaña → definir 3 tipificaciones → crear 2 agentes y asignarlos → crear client_user del tenant. Todo persiste tras recargar. (Verificado vía `test/admin-crud.e2e-spec.ts` + `curl` con el `Origin` real de Vite; falta una pasada manual con clicks en un navegador — ver `PROGRESS.md`.)
+- [x] Cada mutación del flujo anterior aparece en `audit_logs` con usuario, diff e IP.
+- [x] Un supervisor puede editar campañas pero no crear tenants (403 verificado).
+- [x] Tests e2e de los endpoints CRUD principales (crear/editar/listar por rol).
 
 ---
 

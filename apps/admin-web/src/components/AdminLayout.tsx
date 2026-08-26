@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { Icon } from './Icon';
-import { useStore } from '../store/AppStore';
+import { useAdminAuth } from '../api/auth-context';
 import { ROLE_LABELS } from '@callreport/shared';
 import { initials } from '../lib/format';
 
@@ -15,7 +15,15 @@ const navItems = [
 ];
 
 export function AdminLayout({ title, actions, children }: { title: string; actions?: ReactNode; children: ReactNode }) {
-  const { currentUser } = useStore();
+  const { session, logout } = useAdminAuth();
+  const currentUser = session?.user;
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout();
+    navigate('/admin/login', { replace: true });
+  }
+
   return (
     <div className="flex h-screen overflow-hidden antialiased">
       <aside className="hidden md:flex flex-col w-sidebar-width bg-surface border-r border-outline-variant flex-shrink-0">
@@ -46,10 +54,17 @@ export function AdminLayout({ title, actions, children }: { title: string; actio
             <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-label-sm text-label-sm border border-outline-variant">
               {currentUser ? initials(currentUser.fullName) : '--'}
             </div>
-            <div className="flex flex-col overflow-hidden">
+            <div className="flex flex-col overflow-hidden flex-1">
               <span className="font-label-md text-label-md text-on-surface truncate">{currentUser?.fullName ?? 'Invitado'}</span>
               <span className="font-body-sm text-body-sm text-on-surface-variant">{currentUser ? ROLE_LABELS[currentUser.role] : ''}</span>
             </div>
+            <button
+              onClick={handleLogout}
+              title="Cerrar sesión"
+              className="text-on-surface-variant hover:text-error transition-colors p-1"
+            >
+              <Icon name="logout" className="text-[20px]" />
+            </button>
           </div>
         </div>
       </aside>
