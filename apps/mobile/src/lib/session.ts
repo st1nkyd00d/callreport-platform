@@ -44,8 +44,10 @@ export async function clearSession(): Promise<void> {
 
 // Solo agente y cliente tienen pantalla propia en el móvil (plan.md
 // Fase 2). Staff (supervisor/super_admin) administra desde admin-web
-// (Fase 3) -- cae en (agent)/home como fallback inofensivo en vez de
-// romper si alguien de staff prueba loguearse acá.
-export function homeRouteForRole(role: Role): '/(client)/dashboard' | '/(agent)/home' {
-  return role === 'client_user' ? '/(client)/dashboard' : '/(agent)/home';
+// (Fase 3) -- cae en (agent)/nuevo-reporte como fallback inofensivo en
+// vez de romper si alguien de staff prueba loguearse acá.
+export function homeRouteForRole(
+  role: Role,
+): '/(client)/dashboard' | '/(agent)/nuevo-reporte' {
+  return role === 'client_user' ? '/(client)/dashboard' : '/(agent)/nuevo-reporte';
 }

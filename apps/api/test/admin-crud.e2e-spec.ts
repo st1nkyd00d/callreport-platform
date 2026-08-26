@@ -54,7 +54,11 @@ describe('CRUD de administración (e2e)', () => {
     return res.body as LoginResponse;
   }
 
-  async function assertAudited(entityType: string, entityId: string, userId: string) {
+  async function assertAudited(
+    entityType: string,
+    entityId: string,
+    userId: string,
+  ) {
     const logs = await prisma.auditLog.findMany({
       where: { entityType, entityId },
     });
@@ -65,7 +69,9 @@ describe('CRUD de administración (e2e)', () => {
   }
 
   it('flujo completo: tenant -> campaña -> tipificaciones -> agentes -> client_user, todo auditado', async () => {
-    const { accessToken: adminToken, user: admin } = await login('admin@callreport.demo');
+    const { accessToken: adminToken, user: admin } = await login(
+      'admin@callreport.demo',
+    );
     const suffix = randomUUID().slice(0, 8);
 
     // 1. Crear tenant (super_admin).
@@ -93,7 +99,10 @@ describe('CRUD de administración (e2e)', () => {
       .set('Authorization', `Bearer ${supervisorToken}`)
       .send({ name: `Campaña ${suffix}`, tenantId: tenant.id })
       .expect(201);
-    const campaign = campaignRes.body as { id: string; dispositionsCount: number };
+    const campaign = campaignRes.body as {
+      id: string;
+      dispositionsCount: number;
+    };
     expect(campaign.dispositionsCount).toBe(8);
     await assertAudited('Campaign', campaign.id, supervisor.id);
 
@@ -136,9 +145,9 @@ describe('CRUD de administración (e2e)', () => {
       .set('Authorization', `Bearer ${supervisorToken}`)
       .send({ agentIds })
       .expect(200);
-    expect((withAgentsRes.body as { agentIds: string[] }).agentIds.sort()).toEqual(
-      [...agentIds].sort(),
-    );
+    expect(
+      (withAgentsRes.body as { agentIds: string[] }).agentIds.sort(),
+    ).toEqual([...agentIds].sort());
     await assertAudited('Campaign', campaign.id, supervisor.id);
 
     // 5. Crear client_user del tenant nuevo.
@@ -162,7 +171,9 @@ describe('CRUD de administración (e2e)', () => {
       .set('Authorization', `Bearer ${adminToken}`)
       .expect(200);
     expect(
-      (reloadedTenants.body as { id: string }[]).some((t) => t.id === tenant.id),
+      (reloadedTenants.body as { id: string }[]).some(
+        (t) => t.id === tenant.id,
+      ),
     ).toBe(true);
   });
 

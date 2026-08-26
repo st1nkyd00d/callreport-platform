@@ -1,4 +1,12 @@
-import { IsEnum, IsInt, IsOptional, IsString, Max, Min, MinLength } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+  MinLength,
+} from 'class-validator';
 import { TenantStatus } from '../../../generated/prisma/enums';
 
 export class UpdateTenantDto {

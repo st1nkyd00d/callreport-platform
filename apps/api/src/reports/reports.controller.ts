@@ -1,6 +1,19 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
+import { AuditEntity } from '../audit/audit-entity.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { Role } from '../../generated/prisma/enums';
 import type { RequestUser } from '../common/request-user';
+import { CreateReportDto } from './dto/create-report.dto';
+import { UpdateReportDto } from './dto/update-report.dto';
 import { ReportsService } from './reports.service';
 
 function clamp(value: number, min: number, max: number): number {
@@ -26,5 +39,23 @@ export class ReportsController {
       take: clamp(Number(take), 25, 100),
       skip: Math.max(Number(skip) || 0, 0),
     });
+  }
+
+  @Roles(Role.agent)
+  @AuditEntity('CallReport')
+  @Post()
+  create(@CurrentUser() user: RequestUser, @Body() dto: CreateReportDto) {
+    return this.reportsService.create(user, dto);
+  }
+
+  @Roles(Role.agent, Role.supervisor, Role.super_admin)
+  @AuditEntity('CallReport')
+  @Patch(':id')
+  update(
+    @CurrentUser() user: RequestUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateReportDto,
+  ) {
+    return this.reportsService.update(user, id, dto);
   }
 }

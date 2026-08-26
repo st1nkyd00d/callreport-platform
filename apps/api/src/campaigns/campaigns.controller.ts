@@ -78,6 +78,11 @@ export class CampaignsController {
     @Param('dispositionId') dispositionId: string,
     @Body() dto: UpdateDispositionDto,
   ) {
-    return this.campaignsService.updateDisposition(user, id, dispositionId, dto);
+    return this.campaignsService.updateDisposition(
+      user,
+      id,
+      dispositionId,
+      dto,
+    );
   }
 }

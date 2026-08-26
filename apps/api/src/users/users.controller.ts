@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuditEntity } from '../audit/audit-entity.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -20,7 +28,8 @@ export class UsersController {
 
   @Get()
   findAll(@CurrentUser() user: RequestUser, @Query('role') role?: string) {
-    const filter = role && VALID_ROLES.includes(role) ? (role as Role) : undefined;
+    const filter =
+      role && VALID_ROLES.includes(role) ? (role as Role) : undefined;
     return this.usersService.findAll(user, filter);
   }
 

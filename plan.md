@@ -145,6 +145,8 @@ Ricardo App/
 
 **Prerequisitos:** Fase 3 (existen campañas, tipificaciones y asignaciones reales).
 
+**Nota (agregada al implementar la fase):** el modelo `Shift` (turnos, clock-in/out) se sumó al esquema después de escrito este plan, y la política RLS `call_reports_agent_insert` (Fase 3) ya exige un turno abierto para que un agente pueda insertar un reporte. Por eso el alcance real de esta fase incluyó también el ciclo de turno completo (`ShiftsModule` + pantalla "Turno" en el móvil), que no estaba en la lista de tareas original. Ver `PROGRESS.md` para el detalle.
+
 ### Tareas
 
 1. **Endpoints**:
@@ -161,10 +163,10 @@ Ricardo App/
 
 ### Criterios de aceptación
 
-- [ ] Test e2e: agente crea reporte en campaña asignada (201, `tenant_id` correcto derivado en servidor); en campaña NO asignada → 403; con disposition de otra campaña → 400.
-- [ ] Test e2e: edición dentro de ventana OK; con `created_at` retrocedido 31 min → 403 para el autor, 200 para supervisor; ambos casos en `audit_logs`.
-- [ ] En Expo Go (Android y iOS): flujo completo seleccionar campaña → llenar → guardar → aparece en "Mis reportes" en menos de 30 segundos de interacción.
-- [ ] Con modo avión: guardar deja el reporte en cola visible; al recuperar conexión, el reintento lo envía y sale de la cola.
+- [x] Test e2e: agente crea reporte en campaña asignada (201, `tenant_id` correcto derivado en servidor); en campaña NO asignada → 403; con disposition de otra campaña → 400.
+- [x] Test e2e: edición dentro de ventana OK; con `created_at` retrocedido 31 min → 403 para el autor, 200 para supervisor; ambos casos en `audit_logs`.
+- [ ] En Expo Go (Android y iOS): flujo completo seleccionar campaña → llenar → guardar → aparece en "Mis reportes" en menos de 30 segundos de interacción. (Verificado headless: `tsc`/`expo lint` limpios, `expo start` — nativo y `--web` — bundlea sin errores; falta una pasada manual en dispositivo/Expo Go físico — ver `PROGRESS.md`.)
+- [ ] Con modo avión: guardar deja el reporte en cola visible; al recuperar conexión, el reintento lo envía y sale de la cola. (Cola implementada y sin errores de compilación; sin dispositivo físico en esta sesión para probar modo avión real — ver `PROGRESS.md`.)
 
 ---
 

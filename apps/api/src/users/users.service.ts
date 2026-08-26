@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 import { Role } from '../../generated/prisma/enums';
@@ -17,9 +21,9 @@ const SAFE_SELECT = {
   tenantMemberships: { select: { tenantId: true } },
 } as const;
 
-function toSafeUser<
-  T extends { tenantMemberships: { tenantId: string }[] },
->(user: T) {
+function toSafeUser<T extends { tenantMemberships: { tenantId: string }[] }>(
+  user: T,
+) {
   const { tenantMemberships, ...rest } = user;
   return { ...rest, tenantId: tenantMemberships[0]?.tenantId };
 }
@@ -54,8 +58,11 @@ export class UsersService {
     // revertir el create de abajo si el tenantId fuera inválido -- mejor
     // que ese create ni siquiera pueda fallar por eso.
     if (dto.role === Role.client_user) {
-      const tenant = await db.tenant.findUnique({ where: { id: dto.tenantId } });
-      if (!tenant) throw new BadRequestException('La empresa indicada no existe');
+      const tenant = await db.tenant.findUnique({
+        where: { id: dto.tenantId },
+      });
+      if (!tenant)
+        throw new BadRequestException('La empresa indicada no existe');
     }
 
     const passwordHash = await argon2.hash(dto.password);
@@ -75,7 +82,10 @@ export class UsersService {
       });
     }
 
-    return toSafeUser({ ...created, tenantMemberships: dto.tenantId ? [{ tenantId: dto.tenantId }] : [] });
+    return toSafeUser({
+      ...created,
+      tenantMemberships: dto.tenantId ? [{ tenantId: dto.tenantId }] : [],
+    });
   }
 
   async update(user: RequestUser, id: string, dto: UpdateUserDto) {

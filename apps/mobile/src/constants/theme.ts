@@ -14,6 +14,17 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    // Paleta semántica de tipificaciones (Fase 4) -- mismos nombres de
+    // color que Disposition.color (apps/api DEFAULT_DISPOSITIONS), para
+    // los chips del formulario de reporte y las pills de "Mis reportes".
+    primary: '#208AEF',
+    onPrimary: '#ffffff',
+    success: '#16a34a',
+    warning: '#b45309',
+    error: '#dc2626',
+    teal: '#0d9488',
+    purple: '#9333ea',
+    border: '#E0E1E6',
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +32,14 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    primary: '#5CA9F2',
+    onPrimary: '#00223f',
+    success: '#4ade80',
+    warning: '#fbbf24',
+    error: '#f87171',
+    teal: '#2dd4bf',
+    purple: '#c084fc',
+    border: '#2E3135',
   },
 } as const;
 

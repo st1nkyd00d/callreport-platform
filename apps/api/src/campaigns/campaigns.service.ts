@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { RequestUser } from '../common/request-user';
 import { DEFAULT_DISPOSITIONS } from './default-dispositions';
@@ -81,13 +85,19 @@ export class CampaignsService {
 
   async update(user: RequestUser, id: string, dto: UpdateCampaignDto) {
     await this.findOne(user, id);
-    await this.prisma.forUser(user).campaign.update({ where: { id }, data: dto });
+    await this.prisma
+      .forUser(user)
+      .campaign.update({ where: { id }, data: dto });
     return this.findOne(user, id);
   }
 
   // Reemplaza el set de agentes asignados sin ningún DELETE: reactiva
   // (upsert) los que entran, desactiva (updateMany) los que ya no están.
-  async setAgents(user: RequestUser, campaignId: string, dto: SetCampaignAgentsDto) {
+  async setAgents(
+    user: RequestUser,
+    campaignId: string,
+    dto: SetCampaignAgentsDto,
+  ) {
     await this.findOne(user, campaignId);
     const db = this.prisma.forUser(user);
 
@@ -113,6 +123,39 @@ export class CampaignsService {
     await this.findOne(user, campaignId);
     return this.prisma.forUser(user).disposition.findMany({
       where: { campaignId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  // Fase 4: campañas asignadas al agente autenticado -- RLS
+  // (campaigns_agent_select) ya limita el resultado a las campañas
+  // activas donde campaign_agents.is_active es true, así que acá solo
+  // se ordena/formatea. A diferencia de findAll() (admin), no incluye
+  // agentIds ni dispositionsCount: exponer la lista de compañeros
+  // asignados a la misma campaña no le sirve al agente y no es su
+  // información.
+  findAllForAgent(user: RequestUser) {
+    return this.prisma.forUser(user).campaign.findMany({
+      where: { status: 'active' },
+      select: { id: true, name: true, tenant: { select: { name: true } } },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  // Fase 4: tipificaciones activas de una campaña, para el agente
+  // (formulario de reporte) y el cliente (Fase 5). Sin @Roles en el
+  // controller -- RLS ya resuelve qué campañas puede ver cada rol; un
+  // findUnique() que no matchea ninguna política devuelve null, igual
+  // que para un id inexistente.
+  async listActiveDispositions(user: RequestUser, campaignId: string) {
+    const db = this.prisma.forUser(user);
+    const campaign = await db.campaign.findUnique({
+      where: { id: campaignId },
+    });
+    if (!campaign) throw new NotFoundException('Campaña no encontrada');
+
+    return db.disposition.findMany({
+      where: { campaignId, isActive: true },
       orderBy: { sortOrder: 'asc' },
     });
   }

@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ReportsModule } from './reports/reports.module';
+import { ShiftsModule } from './shifts/shifts.module';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsersModule } from './users/users.module';
 
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     AuditModule,
     ReportsModule,
+    ShiftsModule,
     TenantsModule,
     UsersModule,
     CampaignsModule,

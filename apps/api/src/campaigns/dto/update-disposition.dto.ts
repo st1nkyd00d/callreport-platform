@@ -1,4 +1,11 @@
-import { IsBoolean, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsInt,
+  IsOptional,
+  IsString,
+  Min,
+  MinLength,
+} from 'class-validator';
 
 export class UpdateDispositionDto {
   @IsOptional()
