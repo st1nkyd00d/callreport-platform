@@ -5,8 +5,13 @@
 // crudo escrito a mano y asumen estos nombres de columna/tabla exactos.
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider     = "prisma-client"
+  output       = "../generated/prisma"
+  // El resto de apps/api es CommonJS (sin "type": "module" en package.json,
+  // nest build/start corre sobre dist/*.js con require()) -- sin esto el
+  // cliente generado sale ESM por defecto y "nest start" revienta con
+  // "exports is not defined" apenas algo importa este cliente.
+  moduleFormat = "cjs"
 }
 
 datasource db {
@@ -77,6 +82,7 @@ model User {
   pushTokens          PushToken[]
   shifts              Shift[]            @relation("ShiftUser")
   shiftsClosed        Shift[]            @relation("ShiftClosedBy")
+  refreshTokens       RefreshToken[]
 
   @@map("users")
 }
@@ -240,4 +246,27 @@ model PushToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("push_tokens")
+}
+
+// Sesiones de refresh token (Fase 2). Sin tenant_id ni RLS: se consulta
+// ANTES de que exista un contexto de usuario autenticado (login/refresh),
+// así que AuthService usa el cliente base de PrismaService directamente
+// en vez de forUser(). Rotación: cada uso de un refresh token válido lo
+// marca revoked (revokedAt + replacedById) y emite uno nuevo. Nunca se
+// borra físicamente (ver 01-roles.sql: sin DELETE global para app_user) —
+// "revocado" es un flag, no una fila ausente, para poder detectar reuso
+// de un token ya rotado (señal de robo) incluso después de rotarlo.
+model RefreshToken {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedById String?   @map("replaced_by_id")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

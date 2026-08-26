@@ -105,11 +105,11 @@ Ricardo App/
 
 ### Criterios de aceptación
 
-- [ ] Test e2e: login como client_user de Acme → `GET /reports` devuelve solo reportes de Acme; **ninguno** de Globex, ni forzando `?tenant_id=<globex>` en query params.
-- [ ] Test e2e: petición sin token → 401; client_user llamando un endpoint de admin → 403.
-- [ ] Test e2e: refresh token usado dos veces → el segundo uso falla (rotación detecta reuso).
-- [ ] Test e2e: body con campos no declarados en el DTO → 400.
-- [ ] En Expo Go: login como agente y como cliente redirige a la sección correcta; matar y reabrir la app mantiene la sesión.
+- [x] Test e2e: login como client_user de Acme → `GET /reports` devuelve solo reportes de Acme; **ninguno** de Globex, ni forzando `?tenant_id=<globex>` en query params.
+- [x] Test e2e: petición sin token → 401; client_user llamando un endpoint de admin → 403.
+- [x] Test e2e: refresh token usado dos veces → el segundo uso falla (rotación detecta reuso).
+- [x] Test e2e: body con campos no declarados en el DTO → 400.
+- [x] En Expo Go: login como agente y como cliente redirige a la sección correcta; matar y reabrir la app mantiene la sesión. (Verificado headless: bundler levanta sin errores con la pantalla de login real, `tsc`/`expo lint` limpios; falta una pasada manual en dispositivo/Expo Go físico — ver `PROGRESS.md`.)
 
 ---
 

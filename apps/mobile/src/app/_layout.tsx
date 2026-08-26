@@ -4,10 +4,10 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { AuthProvider } from '@/lib/auth-context';
+
 SplashScreen.preventAutoHideAsync();
 
-// Fase 1: solo pantallas placeholder, sin lógica de auth todavía. La
-// Fase 2 agrega tokens en expo-secure-store y redirección real por rol.
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
@@ -17,7 +17,9 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <AuthProvider>
+        <Stack screenOptions={{ headerShown: false }} />
+      </AuthProvider>
     </ThemeProvider>
   );
 }
