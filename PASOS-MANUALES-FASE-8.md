@@ -28,11 +28,19 @@ conectado, `master` pusheado y al día.
 
 ---
 
-## 2. Crear el branch de CI en Neon + cargar los secrets — ⏳ EN PROGRESO
+## 2. Crear el branch de CI en Neon + cargar los secrets — ✅ HECHO (2026-08-28)
 
-Estado: el branch de Neon para CI ya está creado y las dos connection
-strings anotadas. **Falta** verificar permisos y cargar los 3 secrets en
-GitHub (sub-pasos 3 y 4 de abajo).
+Branch de CI: `ep-fragrant-mud-av5jwha8` (host base, sin `-pooler`).
+Permisos verificados a mano (`app_user`: SELECT/INSERT/UPDATE sí, DELETE
+no, BYPASSRLS false; `migrator`: dueño de las tablas, BYPASSRLS true) —
+heredó todo bien del branch de desarrollo, no hizo falta correr
+`01-roles.sql`. Los 3 secrets ya están cargados en GitHub Actions.
+
+**Pendiente de verificar**: todavía no se confirmó un run real de
+`.github/workflows/ci.yml` en verde (dispara con push/PR a `main`/
+`master`, o PR abierto). Hacer un push cualquiera y revisar la pestaña
+**Actions** del repo para confirmar que el job `e2e` pasa contra este
+branch antes de dar el paso por 100% cerrado.
 
 1. ~~En el dashboard de Neon, con el proyecto de desarrollo abierto: crear
    un **branch nuevo**~~ (copia copy-on-write instantánea — hereda schema,
@@ -41,11 +49,11 @@ GitHub (sub-pasos 3 y 4 de abajo).
    - **Directa** (rol `migrator`) → va en el secret `DATABASE_URL`.
    - **Pooled**, host `-pooler` (rol `app_user`) → va en el secret
      `APP_DATABASE_URL`.
-3. **PENDIENTE** — Verificar que `app_user` y `migrator` conserven sus
-   GRANTs en el branch nuevo (deberían heredarse solos). Si algo falla al
-   correr las suites e2e contra este branch con un error de permisos,
-   correr `apps/api/prisma/init/01-roles.sql` a mano ahí (mismo
-   procedimiento que en la Fase 1).
+3. ~~Verificar que `app_user` y `migrator` conserven sus GRANTs en el
+   branch nuevo~~ (deberían heredarse solos). Si algo falla al correr las
+   suites e2e contra este branch con un error de permisos, correr
+   `apps/api/prisma/init/01-roles.sql` a mano ahí (mismo procedimiento que
+   en la Fase 1).
    - **Nota (aprendida en el paso 3, sección de restore)**: los GRANTs se
      heredan solos únicamente si las tablas siguen siendo dueño de
      `migrator`. Si en algún momento se recrea el schema con
@@ -62,8 +70,8 @@ GitHub (sub-pasos 3 y 4 de abajo).
      dashboard (nunca se corre `pg_restore` ahí), pero si alguna vez un
      branch de Neon tira `permission denied for table X` en las suites
      e2e, esta es la causa más probable y el fix de una línea.
-4. **PENDIENTE** — En GitHub → el repo del paso 1 → **Settings → Secrets
-   and variables → Actions → New repository secret**, cargar los 3:
+4. ~~En GitHub → el repo del paso 1 → **Settings → Secrets and variables →
+   Actions → New repository secret**, cargar los 3~~:
    - `DATABASE_URL` (del branch de CI, endpoint directo)
    - `APP_DATABASE_URL` (del branch de CI, endpoint pooled)
    - `JWT_ACCESS_SECRET` (podés generar uno nuevo solo para CI:
