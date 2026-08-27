@@ -17,20 +17,27 @@ env:
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      # npm ci desde la raíz (workspaces) -- el postinstall de apps/api
+      # corre `prisma generate`, que solo lee schema.prisma y no llega a
+      # conectarse a ninguna base. Pero prisma.config.ts (env('DATABASE_URL'))
+      # exige que la variable EXISTA al cargar el config, aunque no sea
+      # alcanzable -- por eso el placeholder, no una URL real.
+      DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-      # npm ci desde la raíz (workspaces) -- el postinstall de apps/api
-      # corre `prisma generate`, que solo lee schema.prisma, no necesita
-      # conexión a la base.
       - run: npm ci
       - run: npm run lint
 
   build:
     runs-on: ubuntu-latest
+    env:
+      # Ver nota de DATABASE_URL en el job `lint`.
+      DATABASE_URL: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
