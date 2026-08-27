@@ -36,11 +36,33 @@ no, BYPASSRLS false; `migrator`: dueño de las tablas, BYPASSRLS true) —
 heredó todo bien del branch de desarrollo, no hizo falta correr
 `01-roles.sql`. Los 3 secrets ya están cargados en GitHub Actions.
 
-**Pendiente de verificar**: todavía no se confirmó un run real de
-`.github/workflows/ci.yml` en verde (dispara con push/PR a `main`/
-`master`, o PR abierto). Hacer un push cualquiera y revisar la pestaña
-**Actions** del repo para confirmar que el job `e2e` pasa contra este
-branch antes de dar el paso por 100% cerrado.
+**Run de CI confirmado en verde** (run
+https://github.com/st1nkyd00d/callreport-platform/actions/runs/33095447993,
+commit `ede9f81`): los 4 jobs (`lint`, `build`, `prisma-usage`, `e2e`)
+pasaron. En el camino aparecieron dos bugs reales de CI, ya corregidos
+(ver commits `6834092` y `ede9f81`) — dejarlos anotados porque son
+gotchas no obvios para cualquier cambio futuro al pipeline:
+
+- **`lint`/`build` fallaban en `npm ci`** con
+  `PrismaConfigEnvError: Cannot resolve environment variable: DATABASE_URL`.
+  `apps/api/prisma.config.ts` usa `env('DATABASE_URL')`, que exige que la
+  variable **exista** al cargar el config (no que sea alcanzable) — el
+  `postinstall` corre `prisma generate`, que no se conecta a nada pero sí
+  necesita que la variable esté seteada. Esos dos jobs no tenían ninguna
+  DB configurada (a diferencia de `e2e`, que sí tiene los secrets). Fix:
+  se les agregó un `DATABASE_URL` placeholder (no una URL real) a nivel
+  de job en `ci.yml`. Si se agrega un job nuevo que corra `npm ci` desde
+  la raíz, va a necesitar el mismo placeholder.
+- **`build` fallaba en `npm run typecheck --workspace apps/mobile`** con
+  `Cannot find module or type declarations for side-effect import of
+  '@/global.css'`. `apps/mobile/expo-env.d.ts` trae
+  `declare module '*.css'` (vía su referencia a `expo/types`), pero
+  estaba gitignoreado por convención default de Expo — en un checkout
+  limpio de CI no existe (nada corre `expo start` ahí para regenerarlo).
+  Su contenido es estático, así que se sacó del `.gitignore` y se
+  commiteó tal cual. Si en algún momento alguien "limpia" el repo y borra
+  `apps/mobile/expo-env.d.ts` pensando que es basura generada, el
+  `typecheck` de CI se va a romper de nuevo con este mismo error.
 
 1. ~~En el dashboard de Neon, con el proyecto de desarrollo abierto: crear
    un **branch nuevo**~~ (copia copy-on-write instantánea — hereda schema,
