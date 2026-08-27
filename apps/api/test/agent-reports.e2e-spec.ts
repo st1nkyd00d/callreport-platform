@@ -86,8 +86,14 @@ describe('Flujo del agente: reportes y turnos (e2e)', () => {
     return res.body as LoginResponse;
   }
 
+  // audit_logs tiene RLS desde Fase 7 (audit_logs_staff_select) -- una
+  // lectura sin contexto de sesión ve 0 filas, igual que cualquier otra
+  // tabla con RLS. La política solo mira el rol, así que cualquier
+  // identidad de staff alcanza para leer.
+  const auditReader = { id: 'audit-reader', role: Role.super_admin };
+
   async function assertAudited(entityType: string, entityId: string, userId: string) {
-    const logs = await prisma.auditLog.findMany({
+    const logs = await prisma.forUser(auditReader).auditLog.findMany({
       where: { entityType, entityId },
       orderBy: { createdAt: 'desc' },
     });

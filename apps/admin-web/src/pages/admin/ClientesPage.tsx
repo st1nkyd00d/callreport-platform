@@ -5,22 +5,30 @@ import { Pill } from '../../components/Pill';
 import { SlideOver } from '../../components/SlideOver';
 import { Toggle } from '../../components/Toggle';
 import { Toast } from '../../components/Toast';
+import { useAdminAuth } from '../../api/auth-context';
 import { useCampaigns } from '../../api/campaigns';
 import { useCreateTenant, useTenants, useUpdateTenant } from '../../api/tenants';
 import { useUsers } from '../../api/users';
 import { ApiError } from '../../api/client';
+import { useDownloadExport, type ExportFormat } from '../../api/exports';
 
 export function ClientesPage() {
+  const { session } = useAdminAuth();
   const tenantsQuery = useTenants();
   const campaignsQuery = useCampaigns();
   const usersQuery = useUsers();
   const createTenant = useCreateTenant();
   const updateTenant = useUpdateTenant();
+  const downloadExport = useDownloadExport();
 
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [form, setForm] = useState({ name: '', editWindowMinutes: 30, active: true });
+  // Fase 7 (plan.md): "exportación global (todos los tenants o uno) para
+  // super_admin". Clave = `${tenantId ?? 'all'}-${format}` para poder
+  // deshabilitar solo el botón que está descargando, no toda la fila.
+  const [exportingKey, setExportingKey] = useState<string | null>(null);
 
   const tenants = tenantsQuery.data ?? [];
   const campaigns = campaignsQuery.data ?? [];
@@ -65,6 +73,18 @@ export function ClientesPage() {
     }
   }
 
+  async function handleExport(format: ExportFormat, tenantId?: string) {
+    const key = `${tenantId ?? 'all'}-${format}`;
+    setExportingKey(key);
+    try {
+      await downloadExport(format, tenantId ? { tenantId } : {});
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'No se pudo exportar');
+    } finally {
+      setExportingKey(null);
+    }
+  }
+
   return (
     <AdminLayout title="Empresas cliente">
       <div className="relative">
@@ -78,12 +98,35 @@ export function ClientesPage() {
               placeholder="Buscar empresa..."
             />
           </div>
-          <button
-            onClick={() => setOpen(true)}
-            className="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center gap-2"
-          >
-            <Icon name="add" className="text-[20px]" /> Nueva empresa
-          </button>
+          <div className="flex items-center gap-2">
+            {session?.user.role === 'super_admin' && (
+              <div className="flex items-center gap-1 border border-outline-variant rounded px-2 py-1">
+                <span className="font-label-sm text-label-sm text-on-surface-variant pl-1">
+                  Exportar todas:
+                </span>
+                <button
+                  onClick={() => handleExport('csv')}
+                  disabled={exportingKey === 'all-csv'}
+                  className="font-label-sm text-label-sm text-primary underline underline-offset-2 disabled:opacity-50 px-1"
+                >
+                  {exportingKey === 'all-csv' ? '…' : 'CSV'}
+                </button>
+                <button
+                  onClick={() => handleExport('pdf')}
+                  disabled={exportingKey === 'all-pdf'}
+                  className="font-label-sm text-label-sm text-primary underline underline-offset-2 disabled:opacity-50 px-1"
+                >
+                  {exportingKey === 'all-pdf' ? '…' : 'PDF'}
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => setOpen(true)}
+              className="bg-primary text-on-primary font-label-md text-label-md px-4 py-2 rounded shadow-sm hover:bg-primary-container hover:text-on-primary-container transition-colors flex items-center gap-2"
+            >
+              <Icon name="add" className="text-[20px]" /> Nueva empresa
+            </button>
+          </div>
         </div>
 
         <div className="bg-surface-container-lowest border border-outline-variant rounded-lg shadow-sm overflow-hidden">
@@ -106,7 +149,21 @@ export function ClientesPage() {
                   </td>
                   <td className="px-4 py-2 font-body-md text-body-md">{campañas}</td>
                   <td className="px-4 py-2 font-body-md text-body-md">{usuarios}</td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-4 py-2 text-right whitespace-nowrap">
+                    <button
+                      onClick={() => handleExport('csv', tenant.id)}
+                      disabled={exportingKey === `${tenant.id}-csv`}
+                      className="text-on-surface-variant hover:text-primary transition-colors text-body-sm underline underline-offset-2 disabled:opacity-50 mr-3"
+                    >
+                      {exportingKey === `${tenant.id}-csv` ? '…' : 'CSV'}
+                    </button>
+                    <button
+                      onClick={() => handleExport('pdf', tenant.id)}
+                      disabled={exportingKey === `${tenant.id}-pdf`}
+                      className="text-on-surface-variant hover:text-primary transition-colors text-body-sm underline underline-offset-2 disabled:opacity-50 mr-3"
+                    >
+                      {exportingKey === `${tenant.id}-pdf` ? '…' : 'PDF'}
+                    </button>
                     <button
                       onClick={() => handleToggleStatus(tenant)}
                       className="text-on-surface-variant hover:text-primary transition-colors text-body-sm underline underline-offset-2"

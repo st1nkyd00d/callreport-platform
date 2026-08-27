@@ -41,6 +41,7 @@ function ClientTabs() {
           tabBarBadgeStyle: { backgroundColor: theme.warning },
         }}
       />
+      <Tabs.Screen name="exportar" options={{ title: 'Exportar' }} />
       <Tabs.Screen name="reporte/[id]" options={{ href: null }} />
     </Tabs>
   );

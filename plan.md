@@ -246,10 +246,10 @@ Ricardo App/
 
 ### Criterios de aceptación
 
-- [ ] Seed inflado a ~50 000 reportes: la descarga CSV completa termina sin que el proceso Node supere memoria estable (verificar con `--inspect` o métricas del contenedor).
-- [ ] El CSV descargado desde la app de un cliente contiene **solo** filas de su tenant y coincide en conteo con el dashboard para el mismo filtro.
-- [ ] El PDF abre en iPhone y Android vía share sheet y refleja los filtros aplicados.
-- [ ] El visor de auditoría muestra los eventos de todas las fases anteriores; sigue siendo imposible modificar `audit_logs` (re-verificar REVOKE).
+- [x] Seed inflado a ~50 000 reportes: la descarga CSV completa termina sin que el proceso Node supere memoria estable (verificar con `--inspect` o métricas del contenedor). (Verificado con `scripts/export-memory-check.ts` -- consumidor lento real vía `node:http`, no un mock -- contra 50 278 filas: heap usado promedio bajó de 55.0 MB a 50.6 MB entre la primera y segunda mitad de la descarga (sin crecimiento monótono), 12.8 MB en 82.5s. Ver `PROGRESS.md` para el detalle completo y el gotcha de `tsx`/decorator metadata que obligó a correrlo compilado.)
+- [x] El CSV descargado desde la app de un cliente contiene **solo** filas de su tenant y coincide en conteo con el dashboard para el mismo filtro. (Verificado con `test/exports.e2e-spec.ts`: conteo contra `GET /reports/summary` y contra `prisma.forUser(user).callReport.findMany()`, más `?tenantId=` de otro tenant forzado sin efecto para un `client_user`.)
+- [x] El PDF abre en iPhone y Android vía share sheet y refleja los filtros aplicados. (Backend verificado con e2e -- `%PDF-`, filtros aplicados, tarjetas de totales; `expo-file-system`/`expo-sharing` integrados en `(client)/exportar.tsx`. Falta la pasada manual en un dispositivo físico -- mismo estado que el resto de los criterios "en dispositivo físico" de las Fases 1-6, ver `PROGRESS.md`.)
+- [x] El visor de auditoría muestra los eventos de todas las fases anteriores; sigue siendo imposible modificar `audit_logs` (re-verificar REVOKE). (`test/audit-viewer.e2e-spec.ts`: acciones de Fases 3/4/6 sobre el mismo reporte + una mutación de admin independiente, todas visibles; `UPDATE`/`DELETE` rechazados por Postgres incluso para staff. `audit_logs` pasó a tener RLS propia en esta fase -- ver D4/gotcha de `INSERT...RETURNING` en `PROGRESS.md`.)
 
 ---
 

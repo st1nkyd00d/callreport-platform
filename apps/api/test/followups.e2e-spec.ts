@@ -212,11 +212,15 @@ describe('Cola de seguimientos (e2e)', () => {
       const socketPayload = (await resolvedEvent) as CallReport;
       expect(socketPayload.id).toBe(report.id);
 
-      // 4. Auditado con action='resolve_followup'.
-      const logs = await prisma.auditLog.findMany({
-        where: { entityType: 'CallReport', entityId: report.id, action: 'resolve_followup' },
-        orderBy: { createdAt: 'desc' },
-      });
+      // 4. Auditado con action='resolve_followup'. audit_logs tiene RLS
+      // desde Fase 7 (audit_logs_staff_select) -- se lee con contexto de
+      // staff, la política solo mira el rol.
+      const logs = await prisma
+        .forUser({ id: 'audit-reader', role: Role.super_admin })
+        .auditLog.findMany({
+          where: { entityType: 'CallReport', entityId: report.id, action: 'resolve_followup' },
+          orderBy: { createdAt: 'desc' },
+        });
       expect(logs.length).toBeGreaterThan(0);
       expect(logs[0].userId).toBe(clientUser.id);
 

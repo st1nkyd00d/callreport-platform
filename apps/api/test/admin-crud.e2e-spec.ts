@@ -5,6 +5,7 @@ import type { App } from 'supertest/types';
 import { randomUUID } from 'node:crypto';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { Role } from '../generated/prisma/enums';
 
 // Cubre el criterio de aceptación de Fase 3 (plan.md): flujo completo
 // tenant -> campaña -> tipificaciones -> agentes -> client_user, cada
@@ -54,12 +55,20 @@ describe('CRUD de administración (e2e)', () => {
     return res.body as LoginResponse;
   }
 
+  // audit_logs tiene RLS desde Fase 7 (audit_logs_staff_select): una
+  // consulta sin contexto de sesión (prisma.auditLog.findMany suelto, sin
+  // forUser()) ve 0 filas -- mismo criterio "sin settings -> cero filas"
+  // que el resto de las tablas con RLS. audit_logs_staff_select solo mira
+  // el rol, no el user_id, así que cualquier identidad de staff sirve
+  // para leer.
+  const auditReader = { id: 'audit-reader', role: Role.super_admin };
+
   async function assertAudited(
     entityType: string,
     entityId: string,
     userId: string,
   ) {
-    const logs = await prisma.auditLog.findMany({
+    const logs = await prisma.forUser(auditReader).auditLog.findMany({
       where: { entityType, entityId },
     });
     expect(logs.length).toBeGreaterThan(0);

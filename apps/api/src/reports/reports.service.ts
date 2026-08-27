@@ -23,6 +23,13 @@ export interface ReportFilters {
   campaignId?: string;
   dispositionIds?: string[];
   scheduledFrom?: Date;
+  // Fase 7 (ExportsModule): filtro opcional, con efecto SOLO para staff
+  // (call_reports_staff_all no tiene restricción de tenant, así que
+  // agregarlo acá es lo único que permite pedir "una sola empresa" en un
+  // export global). Un client_user nunca debería mandar este filtro --
+  // ExportsController ya lo neutraliza antes de llegar acá (RLS igual lo
+  // haría inofensivo, pero por las dudas).
+  tenantId?: string;
   after?: string;
   limit: number;
 }
@@ -73,6 +80,7 @@ export class ReportsService {
     if (filters.scheduledFrom) {
       where.scheduledAt = { gte: filters.scheduledFrom };
     }
+    if (filters.tenantId) where.tenantId = filters.tenantId;
 
     // "Próximas citas" (scheduledFrom, sin cursor -- el carrusel del
     // dashboard pide una sola página de 10) ordena por la cita más
@@ -118,6 +126,7 @@ export class ReportsService {
     if (filters.dispositionIds?.length) {
       where.dispositionId = { in: filters.dispositionIds };
     }
+    if (filters.tenantId) where.tenantId = filters.tenantId;
 
     const db = this.prisma.forUser(user);
     const grouped = await db.callReport.groupBy({

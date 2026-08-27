@@ -4,6 +4,7 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { Observable } from 'rxjs';
@@ -98,15 +99,25 @@ export class AuditInterceptor implements NestInterceptor {
       request.socket?.remoteAddress ??
       undefined;
 
-    await this.prisma.forUser(user).auditLog.create({
-      data: {
-        userId: user.id,
-        action,
-        entityType,
-        entityId,
-        diff,
-        ipAddress,
-      },
-    });
+    // INSERT crudo, NO Prisma.create() (Fase 7, gotcha descubierto al
+    // encender RLS en audit_logs): Prisma's create() hace un
+    // INSERT ... RETURNING internamente, y Postgres exige que la fila
+    // devuelta por un RETURNING pase también la política de SELECT -- no
+    // solo el WITH CHECK del INSERT. audit_logs_staff_select (Fase 7) solo
+    // deja leer a supervisor/super_admin, así que un agente o client_user
+    // insertando su propia fila de auditoría fallaría con "new row
+    // violates row-level security policy" aunque el INSERT en sí sea
+    // válido. Un INSERT sin RETURNING nunca dispara ese chequeo -- evita
+    // así tener que abrir una política de self-select que ampliaría quién
+    // puede leer audit_logs más allá de lo que pide plan.md.
+    await this.prisma.forUserRaw(user, (tx) =>
+      tx.$executeRaw`
+        INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, diff, ip_address)
+        VALUES (
+          ${randomUUID()}, ${user.id}, ${action}, ${entityType}, ${entityId},
+          ${diff !== undefined ? JSON.stringify(diff) : null}::jsonb, ${ipAddress ?? null}
+        )
+      `,
+    );
   }
 }

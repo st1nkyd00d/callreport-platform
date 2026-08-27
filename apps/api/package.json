@@ -18,7 +18,9 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json --runInBand"
+    "test:e2e": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --config ./test/jest-e2e.json --runInBand",
+    "inflate": "tsx prisma/inflate-reports.ts",
+    "export-memory-check": "nest build && node dist/scripts/export-memory-check.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -37,6 +39,7 @@
     "expo-server-sdk": "^7.2.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
+    "pdfmake": "^0.3.11",
     "pg": "^8.22.0",
     "prisma": "^7.9.0",
     "reflect-metadata": "^0.2.2",

@@ -9,5 +9,8 @@ import { ReportsService } from './reports.service';
   imports: [RealtimeModule, NotificationsModule],
   controllers: [ReportsController, AgentReportsController],
   providers: [ReportsService],
+  // Fase 7: ExportsModule reusa summary()/findAll() para el PDF (resumen
+  // ejecutivo) en vez de duplicar SQL.
+  exports: [ReportsService],
 })
 export class ReportsModule {}

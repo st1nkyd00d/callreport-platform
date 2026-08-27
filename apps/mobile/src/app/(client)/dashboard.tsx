@@ -183,16 +183,34 @@ export default function ClientDashboardScreen() {
               </ThemedText>
             </View>
           </View>
-          <Pressable
-            onPress={async () => {
-              await logout();
-              router.replace('/login');
-            }}
-          >
-            <ThemedText type="link" themeColor="textSecondary">
-              Salir
-            </ThemedText>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              onPress={() =>
+                router.push({
+                  pathname: '/(client)/exportar',
+                  params: {
+                    from: filters.from,
+                    to: filters.to,
+                    dispositionIds: filters.dispositionIds?.join(','),
+                  },
+                })
+              }
+            >
+              <ThemedText type="link" themeColor="textSecondary">
+                Exportar
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={async () => {
+                await logout();
+                router.replace('/login');
+              }}
+            >
+              <ThemedText type="link" themeColor="textSecondary">
+                Salir
+              </ThemedText>
+            </Pressable>
+          </View>
         </View>
 
         <FlatList
@@ -381,6 +399,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerLeft: { gap: 4, flexShrink: 1 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   liveBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveDot: { width: 8, height: 8, borderRadius: 4 },
   listContent: { padding: Spacing.four, gap: Spacing.two },

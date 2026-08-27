@@ -5,6 +5,7 @@ import { AppService } from './app.service';
 import { AuditModule } from './audit/audit.module';
 import { AuthModule } from './auth/auth.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { ExportsModule } from './exports/exports.module';
 import { FollowupsModule } from './followups/followups.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -23,6 +24,7 @@ import { UsersModule } from './users/users.module';
     AuditModule,
     RealtimeModule,
     NotificationsModule,
+    ExportsModule,
     FollowupsModule,
     MetricsModule,
     ReportsModule,
