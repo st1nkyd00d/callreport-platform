@@ -45,7 +45,9 @@ const STANDARD_14_FONT_NAMES = new Set([
   'ZapfDingbats',
 ]);
 pdfMake.setUrlAccessPolicy(() => false);
-pdfMake.setLocalAccessPolicy((path: string) => STANDARD_14_FONT_NAMES.has(path));
+pdfMake.setLocalAccessPolicy((path: string) =>
+  STANDARD_14_FONT_NAMES.has(path),
+);
 
 export interface ReportsPdfData {
   tenantLabel: string;
@@ -63,7 +65,9 @@ export interface ReportsPdfData {
   truncated: boolean;
 }
 
-export async function buildReportsPdfDocument(data: ReportsPdfData): Promise<Buffer> {
+export async function buildReportsPdfDocument(
+  data: ReportsPdfData,
+): Promise<Buffer> {
   const doc = pdfMake.createPdf({
     defaultStyle: { font: 'Helvetica', fontSize: 9 },
     pageMargins: [40, 60, 40, 40],
@@ -72,16 +76,29 @@ export async function buildReportsPdfDocument(data: ReportsPdfData): Promise<Buf
       { text: 'CallReport — Resumen ejecutivo', fontSize: 16, bold: true },
       { text: data.tenantLabel, fontSize: 12, margin: [0, 2, 0, 0] },
       { text: `Período: ${data.rangeLabel}`, fontSize: 9, color: '#555555' },
-      { text: `Generado: ${data.generatedAt}`, fontSize: 9, color: '#555555', margin: [0, 0, 0, 12] },
+      {
+        text: `Generado: ${data.generatedAt}`,
+        fontSize: 9,
+        color: '#555555',
+        margin: [0, 0, 0, 12],
+      },
 
-      { text: 'Totales por tipificación', fontSize: 12, bold: true, margin: [0, 0, 0, 6] },
+      {
+        text: 'Totales por tipificación',
+        fontSize: 12,
+        bold: true,
+        margin: [0, 0, 0, 6],
+      },
       {
         columns: [
           {
             width: 'auto',
             table: {
               body: [
-                [{ text: 'Total', bold: true }, { text: String(data.total), bold: true }],
+                [
+                  { text: 'Total', bold: true },
+                  { text: String(data.total), bold: true },
+                ],
                 ...data.byDisposition.map((d) => [d.label, String(d.count)]),
               ],
             },
@@ -91,7 +108,12 @@ export async function buildReportsPdfDocument(data: ReportsPdfData): Promise<Buf
         margin: [0, 0, 0, 16],
       },
 
-      { text: 'Detalle de reportes', fontSize: 12, bold: true, margin: [0, 0, 0, 6] },
+      {
+        text: 'Detalle de reportes',
+        fontSize: 12,
+        bold: true,
+        margin: [0, 0, 0, 6],
+      },
       data.rows.length
         ? {
             table: {
@@ -105,7 +127,13 @@ export async function buildReportsPdfDocument(data: ReportsPdfData): Promise<Buf
                   { text: 'Contacto', bold: true },
                   { text: 'Agente', bold: true },
                 ],
-                ...data.rows.map((r) => [r.createdAt, r.campaign, r.disposition, r.contactName, r.agent]),
+                ...data.rows.map((r) => [
+                  r.createdAt,
+                  r.campaign,
+                  r.disposition,
+                  r.contactName,
+                  r.agent,
+                ]),
               ],
             },
             layout: 'lightHorizontalLines',

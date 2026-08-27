@@ -44,3 +44,6 @@ lerna-debug.log*
 .env
 
 *.tsbuildinfo
+
+# Fase 8 -- dumps locales de scripts/backup-db.{ps1,sh}, nunca se commitean.
+/backups

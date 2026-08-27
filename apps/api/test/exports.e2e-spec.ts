@@ -50,7 +50,8 @@ function parseCsvLine(line: string): string[] {
   const cells: string[] = [];
   let i = 0;
   while (i < line.length) {
-    if (line[i] !== '"') throw new Error(`Celda sin comillas en posición ${i}: ${line}`);
+    if (line[i] !== '"')
+      throw new Error(`Celda sin comillas en posición ${i}: ${line}`);
     i++;
     let value = '';
     while (i < line.length) {
@@ -74,10 +75,13 @@ function parseCsvLine(line: string): string[] {
 }
 
 function parseCsv(text: string): { header: string[]; rows: string[][] } {
-  const withoutBom = text.replace(/^﻿/, '');
+  const withoutBom = text.replace(/^\uFEFF/, '');
   const lines = withoutBom.split('\r\n').filter((l) => l.length > 0);
   const [headerLine, ...dataLines] = lines;
-  return { header: parseCsvLine(headerLine), rows: dataLines.map(parseCsvLine) };
+  return {
+    header: parseCsvLine(headerLine),
+    rows: dataLines.map(parseCsvLine),
+  };
 }
 
 describe('Exportación CSV/PDF (e2e)', () => {
@@ -91,7 +95,11 @@ describe('Exportación CSV/PDF (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
     prisma = moduleFixture.get(PrismaService);
@@ -104,7 +112,10 @@ describe('Exportación CSV/PDF (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   async function login(email: string): Promise<LoginResponse> {
-    const res = await http().post('/auth/login').send({ email, password: PASSWORD }).expect(200);
+    const res = await http()
+      .post('/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
     return res.body as LoginResponse;
   }
 
@@ -158,7 +169,11 @@ describe('Exportación CSV/PDF (e2e)', () => {
 
       const controlIds = (
         await prisma
-          .forUser({ id: user.id, role: Role.client_user, tenantId: user.tenantId })
+          .forUser({
+            id: user.id,
+            role: Role.client_user,
+            tenantId: user.tenantId,
+          })
           .callReport.findMany({ select: { id: true } })
       )
         .map((r) => r.id)
@@ -179,14 +194,22 @@ describe('Exportación CSV/PDF (e2e)', () => {
         .set('Authorization', `Bearer ${acmeToken}`)
         .expect(200);
 
-      expect(parseCsv(forced.text).rows.map((r) => r[0]).sort()).toEqual(
-        parseCsv(withoutForce.text).rows.map((r) => r[0]).sort(),
+      expect(
+        parseCsv(forced.text)
+          .rows.map((r) => r[0])
+          .sort(),
+      ).toEqual(
+        parseCsv(withoutForce.text)
+          .rows.map((r) => r[0])
+          .sort(),
       );
     });
 
     it('filtros from/to/dispositionId coinciden con /reports para el mismo rango', async () => {
       const { accessToken } = await login('client1@acmecorp.demo');
-      const from = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString();
+      const from = new Date(
+        Date.now() - 15 * 24 * 60 * 60 * 1000,
+      ).toISOString();
       const to = new Date().toISOString();
 
       const summaryRes = await http()
@@ -215,12 +238,15 @@ describe('Exportación CSV/PDF (e2e)', () => {
       const empresas = new Set(rows.map((r) => r[2]));
       expect(empresas.size).toBeGreaterThanOrEqual(2);
       expect([...empresas]).toEqual(
-        expect.arrayContaining([expect.stringContaining('Acme'), expect.stringContaining('Globex')]),
+        expect.arrayContaining([
+          expect.stringContaining('Acme'),
+          expect.stringContaining('Globex'),
+        ]),
       );
     });
 
-    it('antiinyección de fórmulas y multilínea: una fila bien escapada, notas prefijadas con \'', async () => {
-      const { accessToken: agentToken, user: agent } = await login('agent1@callreport.demo');
+    it("antiinyección de fórmulas y multilínea: una fila bien escapada, notas prefijadas con '", async () => {
+      const { accessToken: agentToken } = await login('agent1@callreport.demo');
 
       await http()
         .post('/agent/shifts/clock-in')
@@ -258,7 +284,9 @@ describe('Exportación CSV/PDF (e2e)', () => {
       // Exportar como staff para poder ver el reporte sin depender de a
       // qué tenant terminó asignado el agente (el seed cruza asignaciones
       // al azar -- ver comentario ya existente en realtime-reports.e2e-spec.ts).
-      const { accessToken: supervisorToken } = await login('supervisor@callreport.demo');
+      const { accessToken: supervisorToken } = await login(
+        'supervisor@callreport.demo',
+      );
       const csvRes = await http()
         .get('/exports/reports.csv')
         .set('Authorization', `Bearer ${supervisorToken}`)
@@ -270,7 +298,7 @@ describe('Exportación CSV/PDF (e2e)', () => {
 
       const notesIndex = header.indexOf('Notas');
       expect(row[notesIndex]).toBe(
-        "'=SUM(A1) Line two with \"quotes\" and, a comma",
+        '\'=SUM(A1) Line two with "quotes" and, a comma',
       );
     });
   });

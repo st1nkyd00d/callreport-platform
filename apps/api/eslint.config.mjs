@@ -32,4 +32,20 @@ export default tseslint.config(
       "prettier/prettier": ["error", { endOfLine: "auto" }],
     },
   },
+  {
+    // Fase 8 (D15): lint:ci corre SIN --fix, así que estas reglas
+    // type-aware ahora sí bloquean -- y las 12 suites e2e leen
+    // `res.body.<lo que sea>` de supertest, tipado `any` a propósito (es
+    // JSON de una respuesta HTTP real, no hay generic que valga la pena
+    // mantener en 12 archivos de test). Relajarlas acá, solo para test/,
+    // en vez de tocar cientos de asserts en specs de las Fases 2-7 sin
+    // ningún beneficio real de tipos en código de test.
+    files: ['test/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    },
+  },
 );

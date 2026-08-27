@@ -26,7 +26,8 @@ export class ExportsController {
     @Query('dispositionId') dispositionId?: string,
     @Query('tenantId') tenantId?: string,
   ): Promise<void> {
-    const isStaff = user.role === Role.supervisor || user.role === Role.super_admin;
+    const isStaff =
+      user.role === Role.supervisor || user.role === Role.super_admin;
     const filters = parseExportFilters(
       { from, to, campaignId, dispositionId, tenantId },
       isStaff,
@@ -44,12 +45,16 @@ export class ExportsController {
     @Query('dispositionId') dispositionId?: string,
     @Query('tenantId') tenantId?: string,
   ): Promise<void> {
-    const isStaff = user.role === Role.supervisor || user.role === Role.super_admin;
+    const isStaff =
+      user.role === Role.supervisor || user.role === Role.super_admin;
     const filters = parseExportFilters(
       { from, to, campaignId, dispositionId, tenantId },
       isStaff,
     );
-    const { buffer, filename } = await this.exportsService.buildReportsPdf(user, filters);
+    const { buffer, filename } = await this.exportsService.buildReportsPdf(
+      user,
+      filters,
+    );
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',

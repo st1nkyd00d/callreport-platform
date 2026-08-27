@@ -54,10 +54,14 @@ interface PushTokenRow {
   revokedAt: string | null;
 }
 
-async function waitUntil(cond: () => boolean, timeoutMs: number): Promise<void> {
+async function waitUntil(
+  cond: () => boolean,
+  timeoutMs: number,
+): Promise<void> {
   const start = Date.now();
   while (!cond()) {
-    if (Date.now() - start > timeoutMs) throw new Error('timeout esperando condición');
+    if (Date.now() - start > timeoutMs)
+      throw new Error('timeout esperando condición');
     await new Promise((r) => setTimeout(r, 50));
   }
 }
@@ -86,7 +90,11 @@ describe('Push notifications (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
     prisma = moduleFixture.get(PrismaService);
@@ -99,7 +107,10 @@ describe('Push notifications (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   async function login(email: string): Promise<LoginResponse> {
-    const res = await http().post('/auth/login').send({ email, password: PASSWORD }).expect(200);
+    const res = await http()
+      .post('/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
     return res.body as LoginResponse;
   }
 
@@ -110,7 +121,9 @@ describe('Push notifications (e2e)', () => {
   describe('POST /push/register y DELETE /push/register', () => {
     it('registrar token nuevo -> aparece en push_tokens, activo', async () => {
       const { accessToken, user } = await login('agent1@callreport.demo');
-      const { user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
       const token = uniqueToken('nuevo');
 
       await http()
@@ -119,7 +132,9 @@ describe('Push notifications (e2e)', () => {
         .send({ token, platform: 'android' })
         .expect(201);
 
-      const row = await prisma.forUser(supervisorUser).pushToken.findUnique({ where: { token } });
+      const row = await prisma
+        .forUser(supervisorUser)
+        .pushToken.findUnique({ where: { token } });
       expect(row).not.toBeNull();
       expect((row as PushTokenRow).userId).toBe(user.id);
       expect((row as PushTokenRow).revokedAt).toBeNull();
@@ -127,8 +142,12 @@ describe('Push notifications (e2e)', () => {
 
     it('re-registrar el mismo token hace upsert: reactiva y reasigna dueño (D1)', async () => {
       const { accessToken: agentToken } = await login('agent1@callreport.demo');
-      const { accessToken: clientToken, user: clientUser } = await login('client1@acmecorp.demo');
-      const { user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { accessToken: clientToken, user: clientUser } = await login(
+        'client1@acmecorp.demo',
+      );
+      const { user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
       const token = uniqueToken('reasignado');
 
       await http()
@@ -150,7 +169,9 @@ describe('Push notifications (e2e)', () => {
         .send({ token, platform: 'ios' })
         .expect(201);
 
-      const rows = await prisma.forUser(supervisorUser).pushToken.findMany({ where: { token } });
+      const rows = await prisma
+        .forUser(supervisorUser)
+        .pushToken.findMany({ where: { token } });
       expect(rows.length).toBe(1);
       expect(rows[0].userId).toBe(clientUser.id);
       expect(rows[0].revokedAt).toBeNull();
@@ -159,7 +180,9 @@ describe('Push notifications (e2e)', () => {
 
     it('DELETE /push/register sella revokedAt -- no borra la fila', async () => {
       const { accessToken, user } = await login('agent1@callreport.demo');
-      const { user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
       const token = uniqueToken('baja');
 
       await http()
@@ -192,8 +215,12 @@ describe('Push notifications (e2e)', () => {
 
     it('un usuario no puede dar de baja el token de otro (push_tokens_self_all)', async () => {
       const { accessToken: agentToken } = await login('agent1@callreport.demo');
-      const { accessToken: clientToken, user: clientUser } = await login('client1@globex.demo');
-      const { user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { accessToken: clientToken, user: clientUser } = await login(
+        'client1@globex.demo',
+      );
+      const { user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
       const token = uniqueToken('ajeno');
 
       await http()
@@ -242,7 +269,9 @@ describe('Push notifications (e2e)', () => {
         (d) => d.code === 'seguimiento',
       )!;
 
-      const { accessToken: supervisorToken } = await login('supervisor@callreport.demo');
+      const { accessToken: supervisorToken } = await login(
+        'supervisor@callreport.demo',
+      );
       const adminCampaignRes = await http()
         .get(`/admin/campaigns/${campaign.id}`)
         .set('Authorization', `Bearer ${supervisorToken}`)
@@ -254,9 +283,13 @@ describe('Push notifications (e2e)', () => {
         .expect(200);
       const tenantName = (tenantRes.body as Tenant).name;
       const ownClientEmail =
-        tenantName === 'Acme Corp' ? 'client1@acmecorp.demo' : 'client1@globex.demo';
+        tenantName === 'Acme Corp'
+          ? 'client1@acmecorp.demo'
+          : 'client1@globex.demo';
       const otherClientEmail =
-        tenantName === 'Acme Corp' ? 'client1@globex.demo' : 'client1@acmecorp.demo';
+        tenantName === 'Acme Corp'
+          ? 'client1@globex.demo'
+          : 'client1@acmecorp.demo';
 
       const { accessToken: ownClientToken } = await login(ownClientEmail);
       const { accessToken: otherClientToken } = await login(otherClientEmail);
@@ -296,7 +329,10 @@ describe('Push notifications (e2e)', () => {
       // a que el doble de PushService capture la llamada.
       await waitUntil(() => sendAsyncMock.mock.calls.length > 0, 5000);
 
-      const messages = sendAsyncMock.mock.calls[0][0] as { to: string; title: string }[];
+      const messages = sendAsyncMock.mock.calls[0][0] as {
+        to: string;
+        title: string;
+      }[];
       const tokensSent = messages.map((m) => m.to);
 
       expect(tokensSent).toContain(ownClientPushToken);
@@ -315,7 +351,9 @@ describe('Push notifications (e2e)', () => {
   describe('checkReceipts()', () => {
     it('un receipt DeviceNotRegistered da de baja el token (criterio de aceptación 2)', async () => {
       const { accessToken } = await login('agent1@callreport.demo');
-      const { user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
       const token = uniqueToken('receipt');
 
       await http()

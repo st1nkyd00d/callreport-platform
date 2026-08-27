@@ -106,7 +106,8 @@ export class NotificationsService {
     });
 
     if (toRevoke.length > 0) await this.revokeTokens(toRevoke);
-    if (receiptIdToTokenId.size > 0) this.scheduleReceiptCheck(receiptIdToTokenId);
+    if (receiptIdToTokenId.size > 0)
+      this.scheduleReceiptCheck(receiptIdToTokenId);
   }
 
   private scheduleReceiptCheck(receiptIdToTokenId: Map<string, string>): void {
@@ -123,10 +124,15 @@ export class NotificationsService {
   // Público: lo invoca el timer de arriba en producción y el test e2e
   // directo (sin esperar 15 minutos reales).
   async checkReceipts(receiptIdToTokenId: Map<string, string>): Promise<void> {
-    const receipts = await this.push.getReceiptsAsync([...receiptIdToTokenId.keys()]);
+    const receipts = await this.push.getReceiptsAsync([
+      ...receiptIdToTokenId.keys(),
+    ]);
     const toRevoke: string[] = [];
     for (const [receiptId, receipt] of Object.entries(receipts)) {
-      if (receipt.status === 'error' && receipt.details?.error === 'DeviceNotRegistered') {
+      if (
+        receipt.status === 'error' &&
+        receipt.details?.error === 'DeviceNotRegistered'
+      ) {
         const tokenId = receiptIdToTokenId.get(receiptId);
         if (tokenId) toRevoke.push(tokenId);
       }

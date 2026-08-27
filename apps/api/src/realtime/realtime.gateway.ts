@@ -14,7 +14,10 @@ import type { JwtPayload } from '../auth/jwt-payload';
 // tiempo real. El room se deriva SIEMPRE del JWT verificado acá, nunca de
 // lo que el cliente pida en el handshake -- mismo criterio de aislamiento
 // que RLS aplica del lado de la base (ver call_reports_client_select).
-@WebSocketGateway({ path: '/ws', cors: { origin: true } })
+// El CORS de este gateway se configura en RealtimeIoAdapter (main.ts, Fase
+// 8 D2), no acá: las opciones de este decorador se evalúan al importar el
+// archivo, antes de que ConfigModule cargue CORS_ORIGINS de .env.
+@WebSocketGateway({ path: '/ws' })
 export class RealtimeGateway implements OnGatewayConnection {
   private readonly logger = new Logger(RealtimeGateway.name);
 

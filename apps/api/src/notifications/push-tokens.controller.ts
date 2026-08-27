@@ -12,7 +12,10 @@ export class PushTokensController {
   constructor(private readonly pushTokens: PushTokensService) {}
 
   @Post('register')
-  register(@CurrentUser() user: RequestUser, @Body() dto: RegisterPushTokenDto) {
+  register(
+    @CurrentUser() user: RequestUser,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
     return this.pushTokens.register(user, dto);
   }
 

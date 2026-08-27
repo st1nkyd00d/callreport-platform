@@ -58,7 +58,10 @@ export class AuditService {
     const db = this.prisma.forUser(user);
     const [actions, entityTypes] = await Promise.all([
       db.auditLog.findMany({ select: { action: true }, distinct: ['action'] }),
-      db.auditLog.findMany({ select: { entityType: true }, distinct: ['entityType'] }),
+      db.auditLog.findMany({
+        select: { entityType: true },
+        distinct: ['entityType'],
+      }),
     ]);
     return {
       actions: actions.map((a) => a.action).sort(),

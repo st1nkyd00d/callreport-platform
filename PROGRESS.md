@@ -223,3 +223,167 @@ Registro de qué fase de `plan.md` está completa, qué falta y notas operativas
 - `pdfmake` se actualizó a 0.3.11 (la única versión publicada en npm al momento de instalar) -- su API de servidor cambió respecto de las guías viejas basadas en `PdfPrinter`; `pdfmake.d.ts` (declaración ambiental propia, el paquete no trae tipos) documenta el subset usado.
 - El streaming del CSV reutiliza `forUserRaw()` (existía desde la Fase 6 para `MetricsModule`) -- la inversión de esa fase se amortizó acá tal como se había anotado en su momento.
 - Contraseña de todos los usuarios del seed sigue siendo `Password123!` (sin cambios desde la Fase 1).
+
+---
+
+## FASE 8 — Endurecimiento y publicación
+
+**Estado: parcial** (2026-08-27) -- código completo y verificado localmente;
+quedan 3 pasos manuales que requieren cuentas/herramientas que no estaban
+disponibles en esta sesión (ver "Qué quedó pendiente" abajo). El detalle
+completo de decisiones y hallazgos vive en `plan-fase-8.md` (D1-D17).
+
+### Qué se hizo
+
+- **Seguridad**: `@nestjs/throttler` (`ThrottlerModule.forRootAsync`, límites
+  configurables por `.env`, `skipIf` para apagarlo en las suites existentes)
+  + `@Throttle` estricto en `POST /auth/login` y `/auth/refresh`
+  (`apps/api/src/auth/auth.controller.ts`) + `test/throttler.e2e-spec.ts`
+  nuevo (instancia propia con el límite encendido, cubre el criterio de
+  aceptación sin tocar las otras 10 suites). `helmet()`, `trust proxy`,
+  límite de body (128kb), CORS restringido por `CORS_ORIGINS` tanto en HTTP
+  (`main.ts`) como en el gateway de sockets (`RealtimeIoAdapter` nuevo,
+  reemplaza el `cors: { origin: true }` que tenía el decorador
+  `@WebSocketGateway` desde la Fase 5). `apps/api/scripts/check-prisma-usage.mjs`
+  (`npm run lint:prisma`): grep de CI con allowlist versionada -- confirmó
+  que el único acceso al cliente Prisma crudo sigue siendo `AuthService` (7
+  usos, ya documentados) y que `forSystem()`/`forUserRaw()` siguen dentro de
+  sus consumidores legítimos.
+- **Robustez**: `AllExceptionsFilter` (`APP_FILTER` global) con respuestas
+  consistentes en español (`statusCode`/`message`/`error`/`requestId`/
+  `timestamp`/`path`), preservando el array de `message` del `ValidationPipe`
+  tal cual, y con una regla explícita para no romper el streaming del CSV de
+  Fase 7 (`response.headersSent` -> loguea y `response.destroy()`, nunca
+  intenta escribir JSON encima). `nestjs-pino` con request-id (`X-Request-Id`
+  entrante o `randomUUID()`), redacción de `authorization`/`password`/
+  `refreshToken`/`token`, y `silent` bajo `NODE_ENV=test` (Jest ya lo setea
+  solo). `HealthModule` nuevo (`GET /health` liveness sin tocar la base,
+  `GET /health/ready` con un `SELECT 1` real) -- reemplaza `AppController`/
+  `AppService` (el scaffold `'Hello World!'` de Nest, sin uso real desde la
+  Fase 1); `test/health.e2e-spec.ts` reemplaza a `test/app.e2e-spec.ts`.
+  `apps/api/scripts/backup-db.ps1` + `.sh` (`pg_dump -Fc` contra el endpoint
+  directo, rol `migrator`).
+- **Validación de entorno al arrancar** (`src/config/env.validation.ts`,
+  no estaba en el plan original, ver D14 en `plan-fase-8.md`): corta el boot
+  con un mensaje explícito si faltan `DATABASE_URL`/`APP_DATABASE_URL`/
+  `JWT_ACCESS_SECRET`, o `CORS_ORIGINS` en producción.
+- **Dos bugs de deploy reales encontrados y corregidos** (nunca se habían
+  manifestado porque nadie había desplegado ni corrido `start:prod` todavía):
+  `main.ts` no ligaba el server a `0.0.0.0` (Render no lo hubiera podido
+  alcanzar) y le faltaba `app.enableShutdownHooks()`; y `package.json#start:prod`
+  apuntaba a `node dist/main`, pero el build real cae en `dist/src/main.js`
+  (`tsconfig.json` tiene `rootDir: "./"` porque `prisma.config.ts` vive fuera
+  de `src/`) -- corregido y **verificado arrancando la build de producción
+  real en local** (`npm run start:prod`) más `node scripts/smoke-deploy.mjs`
+  contra ella (login de los 3 roles + `/health/ready`, todo en verde).
+- **`lint:ci` como gate real** (D15): `apps/api`'s `lint` corre con `--fix`,
+  nunca había fallado en la práctica aunque tuviera errores no auto-fixables.
+  Se agregó `lint:ci` (sin `--fix`); al correrlo por primera vez aparecieron
+  ~540 errores preexistentes de las Fases 2-7: la gran mayoría (~530)
+  formato de Prettier nunca aplicado (líneas largas sin envolver en 16
+  archivos de `src/`/`test/` -- se normalizó con un `eslint --fix` de una
+  sola vez, **cero cambios de lógica**, verificado corriendo las 11 suites
+  e2e completas después) y `@typescript-eslint/no-unsafe-*` sobre
+  `res.body` sin tipar en las suites e2e, resuelto con un override de
+  ESLint que relaja esas 4 reglas solo para `test/**/*.ts` (no para
+  `src/`) -- reescribir cientos de asserts en specs de las Fases 2-7 no
+  tenía beneficio real de tipos. Los 3 hallazgos genuinos que sí eran bugs
+  de verdad se corrigieron a mano: un BOM literal en un regex de
+  `exports.e2e-spec.ts` disparando `no-irregular-whitespace` (cambiado al
+  escape `\uFEFF`), una variable sin usar, y dos `no-base-to-string` reales en
+  `csv.util.ts`/`all-exceptions.filter.ts`. Scripts nuevos en la raíz
+  (`lint`, `lint:prisma`, `build`, `test:e2e`, `ci`) y `typecheck` en
+  `apps/mobile` -- no existía ninguno.
+- **CI**: `.github/workflows/ci.yml` (4 jobs: `lint`, `build`, `prisma-usage`
+  sin `npm ci` porque el script no tiene dependencias, y `e2e` contra un
+  branch de Neon dedicado vía 3 secrets). `npm run ci` en la raíz como
+  equivalente local. `scripts/smoke-deploy.mjs` (Node plano + `fetch` nativo,
+  sin DI de Nest) para verificar el backend ya desplegado con los 3 roles.
+- **Despliegue**: `render.yaml` en la raíz (Blueprint de Render: Web Service
+  para `callreport-api` + Static Site para `callreport-admin`, sin Docker).
+  `EXPO_PUBLIC_API_URL` en `apps/mobile/src/lib/api-config.ts` (precedencia
+  `env -> hostUri -> localhost`) -- sin esto un build de producción del móvil
+  no tendría forma de encontrar el backend (`hostUri` no existe sin bundler).
+  `apps/admin-web/.env` corregido (D16: definía `VITE_API_MODE`/`VITE_API_URL`,
+  variables de la Fase 2 que `src/api/config.ts` ya no lee desde la Fase 3 --
+  `VITE_API_BASE_URL` es la real; el fallback compartido a `localhost:3000`
+  disimulaba el desacople en desarrollo). Se retiró el mensaje muerto de
+  `AppStore.tsx` que todavía mencionaba `VITE_API_MODE=real` como pendiente
+  de Fase 3.
+- **Datos demo**: `prisma/seed-demo.ts` (script aparte de `prisma/seed.ts`,
+  nunca se tocan entre sí -- las 11 suites e2e dependen de los emails/
+  contraseña exactos del seed de desarrollo). Requiere `--confirm` explícito
+  (borra todo antes de poblar). 3 tenants con nombres de empresa reales
+  (Andes Seguros, Ferretería del Valle, Clínica San Rafael), reportes
+  concentrados en los últimos 14 días en horario laboral, distribución de
+  tipificaciones no uniforme, mezcla deliberada de seguimientos resueltos/
+  pendientes/vencidos y citas futuras para el carrusel del dashboard.
+- **`README.md`** nuevo en la raíz (no existía): arquitectura, setup local,
+  variables de entorno de los 3 apps, procedimiento de migración, despliegue
+  elegido (Render) + por qué se descartó VPS+Docker, backups/restauración,
+  CI, datos demo, seguridad.
+- **Fase 9 agregada a `plan.md`**: la publicación en tiendas (EAS Build,
+  builds firmados, revisión de Apple/Google) y las 6 pasadas manuales "en
+  dispositivo físico" acumuladas desde la Fase 1 se movieron ahí -- dependen
+  de cuentas pagas y hardware que no estaban disponibles al planificar esta
+  fase (ver nota en `plan.md` Fase 8 y `plan-fase-8.md` §0).
+- **Verificación**: las 11 suites e2e (54 tests: 52 preexistentes + 2 del
+  `throttler.e2e-spec.ts` nuevo) pasan juntas con `--runInBand`
+  (`npm run test:e2e`), corridas **completas dos veces** (antes y después de
+  agregar el filtro global y pino, como pedía el plan por el riesgo de
+  romper algo). `npm run ci` (lint + lint:prisma + build + test:e2e de los
+  tres apps) verde de punta a punta.
+
+### Qué quedó pendiente / deferido
+
+- **Backup y restauración**: los scripts existen y siguen la decisión D8
+  (Neon PITR como primera línea, `pg_dump` como respaldo externo), pero
+  **no se ejecutaron de verdad** -- `pg_dump`/`psql` no están instalados en
+  esta máquina (mismo bloqueador que ya venía anotado desde la Fase 4).
+  Falta: instalar las client tools (versión >= la del server de Neon) y
+  correr el ciclo completo dump -> branch nuevo -> `pg_restore` -> las 11
+  suites e2e en verde contra la copia.
+- **Backend sin desplegar todavía**: no hay `git remote` configurado (no se
+  creó el repo en GitHub en esta sesión) ni cuenta de Render. `render.yaml`
+  y `README.md` dejan el camino completo documentado; falta el paso manual
+  de crear el repo, el branch de Neon de CI, cargar los 3 secrets en GitHub,
+  crear los servicios en Render con sus secrets, y correr
+  `scripts/smoke-deploy.mjs` contra la URL real.
+- El CI (`.github/workflows/ci.yml`) nunca corrió en GitHub de verdad (sin
+  remoto) -- sí se verificó su equivalente exacto en local (`npm run ci`)
+  paso por paso.
+- El orden real de ejecución entre `ThrottlerGuard` y `JwtAuthGuard`
+  (ambos `APP_GUARD`, uno en `AppModule` y otro en `AuthModule`) no se
+  verificó empíricamente con logs -- documentado en `plan-fase-8.md` D1 que
+  el impacto práctico es nulo (`/auth/login` es `@Public()`, cualquier orden
+  llega al mismo resultado), así que no se priorizó frente al resto.
+- `apps/mobile` sigue con `name`/`slug`/`scheme` en `"mobile"`, sin
+  `ios.bundleIdentifier`/`android.package`, íconos default del template de
+  Expo y `extra.eas.projectId` vacío -- todo eso es explícitamente Fase 9.
+
+### Notas operativas / bugs corregidos en el camino
+
+- **`ConfigModule.forRoot({ validate })` corre de forma SÍNCRONA al
+  IMPORTAR `app.module.ts`**, no cuando se instancia la app -- la
+  descubrió `test/throttler.e2e-spec.ts` de la peor manera (los primeros
+  intentos de mutar `process.env.THROTTLE_ENABLED` en un `beforeAll` no
+  tenían ningún efecto: el snapshot ya estaba congelado desde que Jest
+  requirió el archivo, antes de que corriera una sola línea de la suite).
+  Fix: `import type` (se borra en la compilación, cero `require()`) en vez
+  de un `import` estático de `AppModule`, más un `import()` dinámico dentro
+  del `beforeAll`, después de mutar el env. Mismo tipo de trampa que el
+  CORS del gateway de sockets (Fase 5) y el `@Throttle` de `auth.controller.ts`
+  (que por eso lee `process.env` directo, no `ConfigService` -- y por eso
+  `main.ts` importa `dotenv/config` como su primerísima línea, para
+  garantizar que esas lecturas vean el `.env` real).
+- **`pino-http` amplía el tipo de `Request.id`** (augmenta `http.IncomingMessage`
+  con `id: ReqId`, `ReqId = string | number | object`) -- `String(request.id)`
+  a ciegas dispara `@typescript-eslint/no-base-to-string` porque el caso
+  `object` daría `"[object Object]"`; se resolvió angostando con un
+  `typeof` antes de stringificar, en vez de silenciar la regla.
+- `apps/api/package.json` movió `dotenv` de `devDependencies` a
+  `dependencies` -- `main.ts` ahora lo necesita en runtime de producción
+  (Render corre `npm ci` sin `devDependencies`), no solo en desarrollo.
+- Contraseña de todos los usuarios del seed de desarrollo/CI sigue siendo
+  `Password123!` (sin cambios desde la Fase 1); el seed de demo usa la
+  misma por simplicidad.

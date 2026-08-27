@@ -52,7 +52,11 @@ describe('Métricas de agentes y overview (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
     prisma = moduleFixture.get(PrismaService);
@@ -65,7 +69,10 @@ describe('Métricas de agentes y overview (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   async function login(email: string): Promise<LoginResponse> {
-    const res = await http().post('/auth/login').send({ email, password: PASSWORD }).expect(200);
+    const res = await http()
+      .post('/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
     return res.body as LoginResponse;
   }
 
@@ -115,7 +122,9 @@ describe('Métricas de agentes y overview (e2e)', () => {
 
   describe('GET /admin/metrics/agents', () => {
     it('total por agente coincide con COUNT(*) real vía Prisma (consulta de control)', async () => {
-      const { accessToken, user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { accessToken, user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
 
       const res = await http()
         .get(`/admin/metrics/agents?from=${from}&to=${to}`)
@@ -134,7 +143,10 @@ describe('Métricas de agentes y overview (e2e)', () => {
         });
         expect(agentMetric.total).toBe(controlTotal);
 
-        const sumByDisposition = agentMetric.byDisposition.reduce((s, d) => s + d.count, 0);
+        const sumByDisposition = agentMetric.byDisposition.reduce(
+          (s, d) => s + d.count,
+          0,
+        );
         expect(sumByDisposition).toBe(agentMetric.total);
       }
 
@@ -151,7 +163,9 @@ describe('Métricas de agentes y overview (e2e)', () => {
 
   describe('GET /admin/metrics/overview', () => {
     it('totalReports/byDay/byTenant/byCampaign coinciden con conteos de control', async () => {
-      const { accessToken, user: supervisorUser } = await login('supervisor@callreport.demo');
+      const { accessToken, user: supervisorUser } = await login(
+        'supervisor@callreport.demo',
+      );
 
       const res = await http()
         .get(`/admin/metrics/overview?from=${from}&to=${to}`)
@@ -182,11 +196,16 @@ describe('Métricas de agentes y overview (e2e)', () => {
         expect(t.count).toBe(controlTenantCount);
       }
 
-      const controlActiveTenants = await db.tenant.count({ where: { status: 'active' } });
+      const controlActiveTenants = await db.tenant.count({
+        where: { status: 'active' },
+      });
       expect(body.activeTenants).toBe(controlActiveTenants);
 
       const controlPending = await db.callReport.count({
-        where: { disposition: { requiresFollowup: true }, followupResolvedAt: null },
+        where: {
+          disposition: { requiresFollowup: true },
+          followupResolvedAt: null,
+        },
       });
       expect(body.pendingFollowups).toBe(controlPending);
 

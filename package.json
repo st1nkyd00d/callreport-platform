@@ -11,6 +11,11 @@
   "scripts": {
     "dev:admin-web": "npm run dev --workspace apps/admin-web",
     "dev:api": "npm run start:dev --workspace apps/api",
-    "dev:mobile": "npm run start --workspace apps/mobile"
+    "dev:mobile": "npm run start --workspace apps/mobile",
+    "lint": "npm run lint:ci --workspace apps/api && npm run lint --workspace apps/admin-web && npm run lint --workspace apps/mobile",
+    "lint:prisma": "npm run lint:prisma --workspace apps/api",
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/admin-web && npm run typecheck --workspace apps/mobile",
+    "test:e2e": "npm run test:e2e --workspace apps/api",
+    "ci": "npm run lint && npm run lint:prisma && npm run build && npm run test:e2e"
   }
 }

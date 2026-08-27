@@ -12,7 +12,8 @@
 export function isExpoPushToken(token: unknown): token is string {
   return (
     typeof token === 'string' &&
-    (((token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')) &&
+    (((token.startsWith('ExponentPushToken[') ||
+      token.startsWith('ExpoPushToken[')) &&
       token.endsWith(']')) ||
       /^[a-z\d]{8}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{4}-[a-z\d]{12}$/i.test(token))
   );

@@ -47,7 +47,11 @@ export class FollowupsService {
 
     const orderBy: Prisma.CallReportOrderByWithRelationInput[] =
       filters.status === 'pending'
-        ? [{ scheduledAt: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }, { id: 'desc' }]
+        ? [
+            { scheduledAt: { sort: 'asc', nulls: 'last' } },
+            { createdAt: 'desc' },
+            { id: 'desc' },
+          ]
         : [{ followupResolvedAt: 'desc' }, { id: 'desc' }];
 
     const db = this.prisma.forUser(user);
@@ -70,7 +74,10 @@ export class FollowupsService {
   // Badge del tab "Seguimientos" en el móvil.
   async count(user: RequestUser): Promise<{ pending: number }> {
     const pending = await this.prisma.forUser(user).callReport.count({
-      where: { disposition: { requiresFollowup: true }, followupResolvedAt: null },
+      where: {
+        disposition: { requiresFollowup: true },
+        followupResolvedAt: null,
+      },
     });
     return { pending };
   }
@@ -87,7 +94,9 @@ export class FollowupsService {
     });
     if (!report) throw new NotFoundException('Reporte no encontrado');
     if (!report.disposition.requiresFollowup) {
-      throw new BadRequestException('Esta tipificación no requiere seguimiento');
+      throw new BadRequestException(
+        'Esta tipificación no requiere seguimiento',
+      );
     }
     if (report.followupResolvedAt) {
       throw new ConflictException('Este seguimiento ya fue resuelto');

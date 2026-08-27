@@ -248,16 +248,11 @@ const StoreContext = createContext<StoreApi | null>(null);
 let reportSeq = 9000;
 
 export function AppStoreProvider({ children }: { children: ReactNode }) {
-  // VITE_API_MODE=real todavía no tiene cliente API que consumir (llega
-  // en la Fase 3, ver plan.md). Por ahora el store siempre opera en modo
-  // mock; esto solo deja avisado el modo a medias en vez de fallar en
-  // silencio si alguien setea la variable antes de tiempo.
-  if (import.meta.env.VITE_API_MODE === 'real') {
-    console.warn(
-      '[AppStore] VITE_API_MODE=real todavía no está implementado (Fase 3). Usando datos mock.',
-    );
-  }
-
+  // Store 100% mock -- lo siguen usando TurnosPage y los prototipos de
+  // diseño en pages/mobile/ (referencia visual, no producción). El resto
+  // de admin-web (Fase 3+) habla con el API real vía src/api/, sin pasar
+  // por acá. `VITE_API_MODE`/`VITE_API_URL` (Fase 2) se retiraron de .env
+  // en la Fase 8 -- nunca tuvieron efecto real (D16).
   const [state, dispatch] = useReducer(reducer, initialState);
   const actorId = state.session.userId;
 

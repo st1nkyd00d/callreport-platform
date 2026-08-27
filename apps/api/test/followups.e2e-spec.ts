@@ -69,7 +69,11 @@ describe('Cola de seguimientos (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.listen(0);
     baseUrl = await app.getUrl();
@@ -93,9 +97,16 @@ describe('Cola de seguimientos (e2e)', () => {
     return socket;
   }
 
-  function waitFor(socket: Socket, event: string, timeoutMs = 5000): Promise<unknown> {
+  function waitFor(
+    socket: Socket,
+    event: string,
+    timeoutMs = 5000,
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`timeout esperando '${event}'`)), timeoutMs);
+      const timer = setTimeout(
+        () => reject(new Error(`timeout esperando '${event}'`)),
+        timeoutMs,
+      );
       socket.once(event, (payload: unknown) => {
         clearTimeout(timer);
         resolve(payload);
@@ -106,7 +117,10 @@ describe('Cola de seguimientos (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   async function login(email: string): Promise<LoginResponse> {
-    const res = await http().post('/auth/login').send({ email, password: PASSWORD }).expect(200);
+    const res = await http()
+      .post('/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
     return res.body as LoginResponse;
   }
 
@@ -153,8 +167,12 @@ describe('Cola de seguimientos (e2e)', () => {
   // Mapea el tenant dueño del reporte a las credenciales de client_user
   // correspondientes -- el seed cruza asignaciones de agentes entre
   // ambos tenants al azar (mismo criterio que realtime-reports.e2e-spec.ts).
-  async function clientEmailFor(tenantId: string): Promise<{ own: string; other: string }> {
-    const { accessToken: supervisorToken } = await login('supervisor@callreport.demo');
+  async function clientEmailFor(
+    tenantId: string,
+  ): Promise<{ own: string; other: string }> {
+    const { accessToken: supervisorToken } = await login(
+      'supervisor@callreport.demo',
+    );
     const tenantRes = await http()
       .get(`/admin/tenants/${tenantId}`)
       .set('Authorization', `Bearer ${supervisorToken}`)
@@ -168,8 +186,11 @@ describe('Cola de seguimientos (e2e)', () => {
   describe('Flujo completo: pendiente -> resuelto -> auditado -> tiempo real', () => {
     it('aparece en pendientes, se resuelve, pasa a resueltos, queda auditado y emite el socket', async () => {
       const report = await createFollowupReport();
-      const { own: ownEmail, other: otherEmail } = await clientEmailFor(report.tenantId);
-      const { accessToken: clientToken, user: clientUser } = await login(ownEmail);
+      const { own: ownEmail, other: otherEmail } = await clientEmailFor(
+        report.tenantId,
+      );
+      const { accessToken: clientToken, user: clientUser } =
+        await login(ownEmail);
       const { accessToken: otherToken } = await login(otherEmail);
 
       // 1. Aparece en pendientes (para el cliente dueño).
@@ -184,7 +205,9 @@ describe('Cola de seguimientos (e2e)', () => {
         .get('/followups/count')
         .set('Authorization', `Bearer ${clientToken}`)
         .expect(200);
-      expect((countBefore.body as { pending: number }).pending).toBeGreaterThan(0);
+      expect((countBefore.body as { pending: number }).pending).toBeGreaterThan(
+        0,
+      );
 
       // 2. El cliente del OTRO tenant no lo ve ni puede resolverlo (404 --
       // RLS lo esconde antes de que el servicio pueda distinguir "no
@@ -218,7 +241,11 @@ describe('Cola de seguimientos (e2e)', () => {
       const logs = await prisma
         .forUser({ id: 'audit-reader', role: Role.super_admin })
         .auditLog.findMany({
-          where: { entityType: 'CallReport', entityId: report.id, action: 'resolve_followup' },
+          where: {
+            entityType: 'CallReport',
+            entityId: report.id,
+            action: 'resolve_followup',
+          },
           orderBy: { createdAt: 'desc' },
         });
       expect(logs.length).toBeGreaterThan(0);
@@ -230,7 +257,9 @@ describe('Cola de seguimientos (e2e)', () => {
         .set('Authorization', `Bearer ${clientToken}`)
         .expect(200);
       expect(
-        (resolvedListRes.body as FollowupsPage).items.some((r) => r.id === report.id),
+        (resolvedListRes.body as FollowupsPage).items.some(
+          (r) => r.id === report.id,
+        ),
       ).toBe(true);
 
       const pendingAfterRes = await http()
@@ -238,7 +267,9 @@ describe('Cola de seguimientos (e2e)', () => {
         .set('Authorization', `Bearer ${clientToken}`)
         .expect(200);
       expect(
-        (pendingAfterRes.body as FollowupsPage).items.some((r) => r.id === report.id),
+        (pendingAfterRes.body as FollowupsPage).items.some(
+          (r) => r.id === report.id,
+        ),
       ).toBe(false);
 
       const countAfter = await http()
@@ -321,8 +352,15 @@ describe('Cola de seguimientos (e2e)', () => {
 
       await expect(
         prisma
-          .forUser({ id: clientUser.id, role: Role.client_user, tenantId: clientUser.tenantId })
-          .callReport.update({ where: { id: report.id }, data: { notes: 'hackeado' } }),
+          .forUser({
+            id: clientUser.id,
+            role: Role.client_user,
+            tenantId: clientUser.tenantId,
+          })
+          .callReport.update({
+            where: { id: report.id },
+            data: { notes: 'hackeado' },
+          }),
       ).rejects.toThrow();
     });
   });

@@ -5,7 +5,11 @@ import { Role } from '../../generated/prisma/enums';
 import type { RequestUser } from '../common/request-user';
 import { AuditService } from './audit.service';
 
-function clampLimit(value: string | undefined, def: number, max: number): number {
+function clampLimit(
+  value: string | undefined,
+  def: number,
+  max: number,
+): number {
   const n = Number(value);
   if (!value || Number.isNaN(n)) return def;
   return Math.min(Math.max(Math.trunc(n), 1), max);

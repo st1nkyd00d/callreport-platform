@@ -1,4 +1,11 @@
-import { BadRequestException, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuditAction, AuditEntity } from '../audit/audit-entity.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -6,7 +13,11 @@ import { Role } from '../../generated/prisma/enums';
 import type { RequestUser } from '../common/request-user';
 import { FollowupsService } from './followups.service';
 
-function clampLimit(value: string | undefined, def: number, max: number): number {
+function clampLimit(
+  value: string | undefined,
+  def: number,
+  max: number,
+): number {
   const n = Number(value);
   if (!value || Number.isNaN(n)) return def;
   return Math.min(Math.max(Math.trunc(n), 1), max);
@@ -45,7 +56,10 @@ export class FollowupsController {
   @AuditEntity('CallReport')
   @AuditAction('resolve_followup')
   @Post(':reportId/resolve')
-  resolve(@CurrentUser() user: RequestUser, @Param('reportId') reportId: string) {
+  resolve(
+    @CurrentUser() user: RequestUser,
+    @Param('reportId') reportId: string,
+  ) {
     return this.followupsService.resolve(user, reportId);
   }
 }

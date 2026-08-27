@@ -54,7 +54,8 @@ export class AuditInterceptor implements NestInterceptor {
       AUDIT_ACTION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    const action = actionOverride ?? ACTION_BY_METHOD[request.method] ?? 'update';
+    const action =
+      actionOverride ?? ACTION_BY_METHOD[request.method] ?? 'update';
 
     return next.handle().pipe(
       concatMap(async (response: unknown) => {
@@ -110,8 +111,10 @@ export class AuditInterceptor implements NestInterceptor {
     // válido. Un INSERT sin RETURNING nunca dispara ese chequeo -- evita
     // así tener que abrir una política de self-select que ampliaría quién
     // puede leer audit_logs más allá de lo que pide plan.md.
-    await this.prisma.forUserRaw(user, (tx) =>
-      tx.$executeRaw`
+    await this.prisma.forUserRaw(
+      user,
+      (tx) =>
+        tx.$executeRaw`
         INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, diff, ip_address)
         VALUES (
           ${randomUUID()}, ${user.id}, ${action}, ${entityType}, ${entityId},

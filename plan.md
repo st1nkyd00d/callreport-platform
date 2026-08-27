@@ -18,7 +18,7 @@ Un call center ofrece el servicio de contestar llamadas para otras empresas ("cl
 | Push | Desde v1, vía Expo Notifications (FCM/APNs), `expo-server-sdk` en backend |
 | Telefonía | Manual siempre por ahora; el esquema deja campos opcionales (`duration_seconds`, `external_call_id`, `recording_url`) |
 | Base de datos | Neon (PostgreSQL administrado, serverless) — sin instancia local ni contenedor propio |
-| Escala | Pequeña (<20 agentes); hosting de api/admin-web indefinido, sin Docker por ahora (se reevaluará Docker Compose solo para esos servicios en Fase 8; la base sigue en Neon) |
+| Escala | Pequeña (<20 agentes); hosting de api/admin-web en Render (Fase 8, sin Docker), una sola instancia — la base sigue en Neon |
 | Alcance v1 | Núcleo + métricas de agentes + cola de seguimientos + multi-usuario por tenant |
 
 ### Estructura del monorepo
@@ -255,25 +255,82 @@ Ricardo App/
 
 ## FASE 8 — Endurecimiento y publicación
 
-**Objetivo:** dejar el sistema listo para producción y las apps listas para las tiendas.
+**Objetivo:** dejar el backend y el panel admin listos para producción.
 
 **Prerequisitos:** Fases 1–7 completas y verificadas.
+
+**Nota (agregada al planificar la fase, ver `plan-fase-8.md`):** la
+publicación móvil en tiendas (tarea 4 original de este plan) depende de
+cuentas pagas (Apple/Google) y dispositivos físicos que no estaban
+disponibles al ejecutar esta fase — se movió a una **Fase 9** nueva,
+junto con todas las pasadas manuales "en dispositivo físico" que quedaron
+pendientes desde las Fases 1–7. La Fase 8 cierra con: seguridad,
+robustez, CI en verde y el backend + admin-web desplegados (Render, sin
+Docker — ver `plan-fase-8.md` D10 para por qué se descartó VPS+Docker).
 
 ### Tareas
 
 1. **Seguridad**: `@nestjs/throttler` (límite estricto en `/auth/*`), `helmet`, CORS restringido al dominio del admin-web, tamaño máximo de body, revisión de que **ningún** servicio use el cliente Prisma crudo (grep de CI que falle si aparece fuera de `PrismaService`).
-2. **Robustez**: manejo global de excepciones con respuestas consistentes en español, logging estructurado (pino) con request-id, healthcheck `GET /health`, backups automatizados de postgres (script `pg_dump` + documentación de restauración).
-3. **Pruebas finales**: suite e2e completa verde en CI (GitHub Actions: lint + test + build de los tres apps); prueba de humo del flujo completo de los tres roles siguiendo la sección "Verificación" del plan aprobado.
-4. **Publicación móvil**: configurar EAS Build (perfiles dev/preview/production), íconos y splash, `app.json` con bundle IDs, builds firmados para Play Store y App Store, notas para la revisión de Apple (cuentas demo de cada rol).
-5. **Despliegue**: definir en esta fase si conviene retomar Docker (p.ej. `docker-compose.prod.yml` con api + admin-web tras nginx con TLS vía Let's Encrypt, postgres con volumen respaldado) o desplegar directo en un VPS/PaaS sin contenedores; documentar en `README.md` la opción elegida, variables de entorno y el procedimiento de migración.
-6. **Datos demo pulidos** para la presentación al cliente final.
+2. **Robustez**: manejo global de excepciones con respuestas consistentes en español, logging estructurado (pino) con request-id, healthcheck `GET /health` (+ `/health/ready`), backups automatizados de postgres (script `pg_dump` + documentación de restauración).
+3. **Pruebas finales**: suite e2e completa verde en CI (GitHub Actions: lint + test + build de los tres apps); prueba de humo del flujo completo de los tres roles contra el backend ya desplegado (`scripts/smoke-deploy.mjs`).
+4. ~~Publicación móvil~~ — movida a **Fase 9**.
+5. **Despliegue**: Render (Web Service para el API + Static Site para admin-web, sin Docker — la base sigue en Neon); `render.yaml` en la raíz como Blueprint; documentado en `README.md` con la alternativa VPS+Docker descartada.
+6. **Datos demo pulidos** para la presentación al cliente final (`prisma/seed-demo.ts`, script aparte del seed de desarrollo/CI).
 
 ### Criterios de aceptación
 
-- [ ] CI en verde: lint, tests e2e (incluida la suite de aislamiento) y builds de api, mobile y admin-web.
-- [ ] Build de producción de la app instalada en un Android y un iPhone físicos: flujo completo agente + cliente + push funcionando contra el backend desplegado.
-- [ ] Rate limit verificado: fuerza bruta a `/auth/login` bloqueada tras N intentos.
-- [ ] Backup y restauración de la base ejecutados una vez con éxito, documentados.
+- [x] CI en verde: lint, tests e2e (incluida la suite de aislamiento) y builds de api, mobile y admin-web. (`.github/workflows/ci.yml`, 4 jobs; equivalente local `npm run ci` verificado: 11 suites e2e / 52 tests en verde, `lint`/`lint:prisma`/`build` de los tres apps limpios.)
+- [x] Rate limit verificado: fuerza bruta a `/auth/login` bloqueada tras N intentos. (`test/throttler.e2e-spec.ts`, instancia propia con `THROTTLE_ENABLED=true`; el resto de las suites corre con el throttler inerte para no romperse con sus ~35 logins reales por corrida.)
+- [ ] Backup y restauración de la base ejecutados una vez con éxito, documentados. (Scripts `backup-db.ps1`/`.sh` listos; falta instalar `pg_dump`/`psql` — no disponibles en la máquina de desarrollo — y correr la restauración una vez contra un branch de Neon, ver `PROGRESS.md`.)
+- [ ] Backend desplegado y accesible: `scripts/smoke-deploy.mjs` en verde contra la URL real. (`render.yaml` listo; falta el paso manual de crear la cuenta/servicios en Render y cargar los secrets, ver `PROGRESS.md`.)
+
+---
+
+## FASE 9 — Publicación móvil
+
+**Objetivo:** las apps listas para las tiendas, y cerrar todas las
+verificaciones manuales "en dispositivo físico" acumuladas desde la
+Fase 1.
+
+**Prerequisitos:** Fase 8 completa (backend desplegado y endurecido).
+
+### Tareas
+
+1. `npx eas init` (llena `extra.eas.projectId`, hoy `""` en `app.json` —
+   bloqueador del push real desde la Fase 6) y `eas.json` con perfiles
+   dev/preview/production.
+2. Development build (`eas build --profile development`) para probar
+   **push remoto real** — Expo Go ya no lo entrega desde el SDK 53.
+3. Íconos, splash y `app.json` reales: `name`/`slug`/`scheme` hoy dicen
+   `"mobile"` (placeholder del template de Expo, nunca tocado desde el
+   commit inicial); `ios.bundleIdentifier` y `android.package` no están
+   definidos (bloquean el build tal cual).
+4. Builds firmados, subida a Play Store y App Store, notas para la
+   revisión de Apple (cuentas demo de cada rol).
+5. **Pasadas manuales acumuladas de las Fases 1–8** (todas verificadas
+   hasta ahora solo de forma headless — bundler/tsc/lint limpios, tests
+   e2e reales contra Neon — pero nunca en un dispositivo físico real, ver
+   `PROGRESS.md` de cada fase para el detalle):
+   - Flujo del agente completo en <30s (Fase 4).
+   - Modo avión con la cola offline de reportes (Fase 4).
+   - Dos sesiones simultáneas (agente + cliente) para verificar tiempo
+     real con latencia real de dispositivo, y resync tras volver del
+     background (Fase 5).
+   - Push real llegando con la app cerrada, deep link a la notificación,
+     targeting correcto de supervisores (Fase 6).
+   - Compartir/abrir un CSV y un PDF exportados desde el share sheet de
+     iOS/Android (Fase 7).
+   - Navegador real con clicks para el flujo completo de admin-web
+     (Fases 3, 6, 7).
+
+### Criterios de aceptación
+
+- [ ] Build de producción de la app instalada en un Android y un iPhone
+      físicos: flujo completo agente + cliente + push funcionando contra
+      el backend desplegado (Fase 8).
+- [ ] Las 6 pasadas manuales de la tarea 5 verificadas y tachadas de
+      `PROGRESS.md`.
+- [ ] App publicada (o en revisión) en Play Store y App Store.
 
 ---
 
@@ -282,4 +339,4 @@ Ricardo App/
 - **RLS mal configurado = fuga entre tenants.** Mitigación: la suite de aislamiento (Fases 1–2) corre en CI en cada commit; conexión solo con rol no-superusuario; `FORCE ROW LEVEL SECURITY`.
 - **Sockets no entregan eventos con la app en background.** Mitigación: resync al volver a primer plano (Fase 5) + push (Fase 6); el socket es mejora de experiencia, no fuente de verdad.
 - **Pérdida de reportes por mala conexión del agente.** Mitigación: cola local con reintento (Fase 4).
-- **Revisión de Apple.** Mitigación: cuentas demo por rol y descripción clara del uso B2B en la ficha (Fase 8).
+- **Revisión de Apple.** Mitigación: cuentas demo por rol y descripción clara del uso B2B en la ficha (Fase 9).

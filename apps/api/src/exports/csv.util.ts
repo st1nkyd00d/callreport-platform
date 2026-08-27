@@ -12,6 +12,12 @@
 const FORMULA_PREFIX_RE = /^[=+\-@\t\r]/;
 
 export function escapeCsvCell(value: unknown): string {
+  // Utilidad deliberadamente genérica (Fase 7): stringifica cualquier
+  // valor de celda (string/number/boolean/Date en todos los llamadores
+  // reales de exports.service.ts). eslint-disable puntual en vez de
+  // angostar el tipo -- angostarlo movería la responsabilidad de validar
+  // "no me pasen objetos" a cada call site sin necesidad real hoy.
+  // eslint-disable-next-line @typescript-eslint/no-base-to-string
   let text = value === null || value === undefined ? '' : String(value);
   // Una fila CSV = una línea: los saltos de línea de las notas se
   // convierten en espacio en vez de romper el parseo de la fila.

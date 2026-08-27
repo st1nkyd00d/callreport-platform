@@ -1,0 +1,80 @@
+# Fase 8 (D10): Blueprint de Render para desplegar api + admin-web desde
+# este monorepo, sin Docker (la base sigue en Neon). Con esto en el repo,
+# "New > Blueprint" en el dashboard de Render arma los dos servicios de
+# una -- ver README.md "Despliegue" para el detalle completo y los pasos
+# manuales que quedan (secrets, plan pago, dominio final).
+#
+# Nota sobre plan: "starter" (pago) es deliberado, no un default -- el
+# free tier de Render duerme el servicio por inactividad, lo que mata
+# todos los sockets de Socket.io abiertos y retrasa el push. Ver D10 en
+# plan-fase-8.md.
+services:
+  - name: callreport-api
+    type: web
+    runtime: node
+    plan: starter
+    buildCommand: npm ci && npm run build --workspace apps/api
+    startCommand: npm run start:prod --workspace apps/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      # Secrets -- Render pide el valor la primera vez (sync: false), no
+      # quedan en este archivo. Los tres apuntan al branch de PRODUCCIÓN
+      # de Neon (no al de desarrollo ni al de CI).
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # Dominio real de callreport-admin (abajo). Deterministo a partir
+      # del `name` del servicio de abajo MIENTRAS Render pueda asignarle
+      # ese subdominio exacto -- si no puede (ya está tomado), corregir
+      # este valor a mano en el dashboard con el dominio real que asigne
+      # y reiniciar callreport-api.
+      - key: CORS_ORIGINS
+        value: https://callreport-admin.onrender.com
+      - key: THROTTLE_ENABLED
+        value: 'true'
+      - key: THROTTLE_AUTH_LIMIT
+        value: '10'
+      - key: THROTTLE_AUTH_TTL
+        value: '60'
+      - key: THROTTLE_GLOBAL_LIMIT
+        value: '120'
+      - key: THROTTLE_GLOBAL_TTL
+        value: '60'
+      - key: LOG_LEVEL
+        value: info
+      # false hasta que la Fase 9 corra `eas init` (extra.eas.projectId
+      # sigue vacío) -- con push apagado, NotificationsService no intenta
+      # mandar nada, solo lo audita.
+      - key: PUSH_ENABLED
+        value: 'false'
+      - key: EXPO_ACCESS_TOKEN
+        value: ''
+      - key: METRICS_TZ
+        value: America/Argentina/Buenos_Aires
+      # No se declara PORT: Render lo inyecta solo, y main.ts ya lo lee
+      # de process.env.PORT.
+
+  - name: callreport-admin
+    type: web
+    runtime: static
+    buildCommand: npm ci && npm run build --workspace apps/admin-web
+    staticPublishPath: apps/admin-web/dist
+    envVars:
+      # Mismo caveat que CORS_ORIGINS de arriba: deterministo a partir del
+      # `name` de callreport-api MIENTRAS no cambie. VITE_API_BASE_URL se
+      # hornea en build time (Vite) -- cambiar esta variable después
+      # implica un rebuild del static site, no solo un restart.
+      - key: VITE_API_BASE_URL
+        value: https://callreport-api.onrender.com
+    routes:
+      # SPA: cualquier ruta que no sea un asset real cae en index.html,
+      # imprescindible para que React Router maneje el resto del lado
+      # del cliente (recargar /admin/campanas/123 a mano, por ejemplo).
+      - type: rewrite
+        source: /*
+        destination: /index.html

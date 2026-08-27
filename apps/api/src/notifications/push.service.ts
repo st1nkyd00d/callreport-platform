@@ -64,7 +64,9 @@ export class PushService {
         // tickets de error para no desalinear tickets[] contra messages[].
         const message = err instanceof Error ? err.message : String(err);
         this.logger.error(`Error enviando chunk de push: ${message}`);
-        tickets.push(...chunk.map(() => ({ status: 'error' as const, message })));
+        tickets.push(
+          ...chunk.map(() => ({ status: 'error' as const, message })),
+        );
       }
     }
     return tickets;
@@ -79,7 +81,10 @@ export class PushService {
     const receipts: Record<string, ExpoPushReceipt> = {};
     for (const chunk of chunks) {
       try {
-        Object.assign(receipts, await expo.getPushNotificationReceiptsAsync(chunk));
+        Object.assign(
+          receipts,
+          await expo.getPushNotificationReceiptsAsync(chunk),
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         this.logger.error(`Error consultando receipts de push: ${message}`);

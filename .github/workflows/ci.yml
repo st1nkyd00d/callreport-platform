@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# Fase 8 (D9): 4 jobs. lint/build/prisma-usage no tocan la red y corren en
+# paralelo; e2e es el único que pega contra Neon (branch de CI dedicado --
+# ver README.md "CI" para cómo crearlo). Node 22 en todos, igual que en
+# desarrollo (ver PROGRESS.md Fase 2: el motor WASM de Prisma y
+# expo-server-sdk vía import() dinámico ya se probaron contra esta
+# versión).
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      # npm ci desde la raíz (workspaces) -- el postinstall de apps/api
+      # corre `prisma generate`, que solo lee schema.prisma, no necesita
+      # conexión a la base.
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+
+  prisma-usage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # Sin npm ci: check-prisma-usage.mjs es Node plano sin dependencias
+      # (Fase 8, D4) -- análisis estático de texto, no necesita node_modules.
+      - run: node apps/api/scripts/check-prisma-usage.mjs
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Las suites van contra Neon por red real (Fase 4: en paralelo agotan
+    # las conexiones del pooler, por eso test:e2e ya corre con
+    # --runInBand) -- timeout generoso.
+    timeout-minutes: 15
+    env:
+      # Apuntan al branch de CI de Neon (NO al de desarrollo) -- ver
+      # README.md "CI" para cómo crearlo y cargar estos 3 secrets.
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APP_DATABASE_URL: ${{ secrets.APP_DATABASE_URL }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      # Fijas: no gastar cuota de Expo desde CI, y el resto son los
+      # defaults documentados en .env.example.
+      PUSH_ENABLED: 'false'
+      METRICS_TZ: America/Argentina/Buenos_Aires
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      # El branch de CI se crea COMO COPIA del de desarrollo (ya seedeado
+      # -- hereda schema, roles, GRANTs, RLS y datos, ver README.md), así
+      # que acá solo se aplican migraciones nuevas, nunca se reseedea
+      # (prisma/seed.ts no es necesariamente idempotente en reintentos).
+      # Si el branch de CI arranca vacío, correr `npm run db:seed` una
+      # vez a mano antes del primer push.
+      - name: Aplicar migraciones (endpoint directo, rol migrator)
+        working-directory: apps/api
+        run: npx prisma migrate deploy
+      - name: Suite e2e completa (incluye aislamiento multi-tenant)
+        run: npm run test:e2e

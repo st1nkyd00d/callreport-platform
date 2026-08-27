@@ -11,7 +11,10 @@ declare module 'pdfmake' {
     setFonts(fonts: Record<string, unknown>): void;
     setUrlAccessPolicy(callback: (url: string) => boolean): void;
     setLocalAccessPolicy(callback: (path: string) => boolean): void;
-    createPdf(docDefinition: unknown, options?: Record<string, unknown>): PdfMakeDocument;
+    createPdf(
+      docDefinition: unknown,
+      options?: Record<string, unknown>,
+    ): PdfMakeDocument;
   }
 
   const pdfMake: PdfMake;

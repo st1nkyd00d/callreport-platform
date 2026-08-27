@@ -87,9 +87,10 @@ export class ReportsService {
     // próxima primero, no por creación: el feed normal sí quiere
     // createdAt desc, pero para citas eso mostraría la última cargada,
     // no la más urgente.
-    const orderBy: Prisma.CallReportOrderByWithRelationInput[] = filters.scheduledFrom
-      ? [{ scheduledAt: 'asc' }, { id: 'asc' }]
-      : [{ createdAt: 'desc' }, { id: 'desc' }];
+    const orderBy: Prisma.CallReportOrderByWithRelationInput[] =
+      filters.scheduledFrom
+        ? [{ scheduledAt: 'asc' }, { id: 'asc' }]
+        : [{ createdAt: 'desc' }, { id: 'desc' }];
 
     const db = this.prisma.forUser(user);
     const rows = await db.callReport.findMany({
@@ -265,7 +266,9 @@ export class ReportsService {
     // puede tumbar el 201 de un reporte ya confirmado en la base.
     this.notifications.notifyReportCreated(report).catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Error notificando push para reporte ${report.id}: ${message}`);
+      this.logger.error(
+        `Error notificando push para reporte ${report.id}: ${message}`,
+      );
     });
     return report;
   }

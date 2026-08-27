@@ -15,4 +15,5 @@ export const AuditEntity = (entityType: string) =>
 // la deriva del método HTTP: POST->create, DELETE->delete, el resto->update).
 // Fase 6: POST /followups/:id/resolve es un POST pero la acción real no es
 // "create" -- sin esto quedaría mal etiquetada en audit_logs.
-export const AuditAction = (action: string) => SetMetadata(AUDIT_ACTION_KEY, action);
+export const AuditAction = (action: string) =>
+  SetMetadata(AUDIT_ACTION_KEY, action);

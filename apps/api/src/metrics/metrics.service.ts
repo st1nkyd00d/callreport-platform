@@ -66,7 +66,9 @@ export class MetricsService {
         `,
       ]);
 
-      const hoursByAgent = new Map(hoursRows.map((r) => [r.userId, Number(r.hours ?? 0)]));
+      const hoursByAgent = new Map(
+        hoursRows.map((r) => [r.userId, Number(r.hours ?? 0)]),
+      );
       const dispositionsByAgent = new Map<
         string,
         {
@@ -81,7 +83,10 @@ export class MetricsService {
       const totalByAgent = new Map<string, number>();
       for (const row of countRows) {
         const count = Number(row.count);
-        totalByAgent.set(row.agentId, (totalByAgent.get(row.agentId) ?? 0) + count);
+        totalByAgent.set(
+          row.agentId,
+          (totalByAgent.get(row.agentId) ?? 0) + count,
+        );
         const list = dispositionsByAgent.get(row.agentId) ?? [];
         list.push({
           dispositionId: row.dispositionId,
@@ -102,7 +107,8 @@ export class MetricsService {
           fullName: agent.fullName,
           total,
           activeHours: Number(activeHours.toFixed(2)),
-          perActiveHour: activeHours > 0 ? Number((total / activeHours).toFixed(2)) : 0,
+          perActiveHour:
+            activeHours > 0 ? Number((total / activeHours).toFixed(2)) : 0,
           byDisposition: dispositionsByAgent.get(agent.id) ?? [],
         };
       });
@@ -113,9 +119,15 @@ export class MetricsService {
     return this.prisma.forUserRaw(user, async (tx) => {
       const { from, to, tz } = range;
 
-      const [byDayRows, byTenantRows, byCampaignRows, activeTenants, pendingFollowups, agentsOnShift] =
-        await Promise.all([
-          tx.$queryRaw<{ day: string; count: bigint }[]>`
+      const [
+        byDayRows,
+        byTenantRows,
+        byCampaignRows,
+        activeTenants,
+        pendingFollowups,
+        agentsOnShift,
+      ] = await Promise.all([
+        tx.$queryRaw<{ day: string; count: bigint }[]>`
             SELECT to_char(date_trunc('day', created_at AT TIME ZONE ${tz}), 'YYYY-MM-DD') AS day,
                    COUNT(*)::bigint AS count
             FROM call_reports
@@ -123,7 +135,7 @@ export class MetricsService {
             GROUP BY 1
             ORDER BY 1
           `,
-          tx.$queryRaw<{ tenantId: string; name: string; count: bigint }[]>`
+        tx.$queryRaw<{ tenantId: string; name: string; count: bigint }[]>`
             SELECT cr.tenant_id AS "tenantId", t.name, COUNT(*)::bigint AS count
             FROM call_reports cr
             JOIN tenants t ON t.id = cr.tenant_id
@@ -131,7 +143,7 @@ export class MetricsService {
             GROUP BY cr.tenant_id, t.name
             ORDER BY count DESC
           `,
-          tx.$queryRaw<{ campaignId: string; name: string; count: bigint }[]>`
+        tx.$queryRaw<{ campaignId: string; name: string; count: bigint }[]>`
             SELECT cr.campaign_id AS "campaignId", c.name, COUNT(*)::bigint AS count
             FROM call_reports cr
             JOIN campaigns c ON c.id = cr.campaign_id
@@ -139,14 +151,20 @@ export class MetricsService {
             GROUP BY cr.campaign_id, c.name
             ORDER BY count DESC
           `,
-          tx.tenant.count({ where: { status: TenantStatus.active } }),
-          tx.callReport.count({
-            where: { disposition: { requiresFollowup: true }, followupResolvedAt: null },
-          }),
-          tx.shift.count({ where: { endedAt: null } }),
-        ]);
+        tx.tenant.count({ where: { status: TenantStatus.active } }),
+        tx.callReport.count({
+          where: {
+            disposition: { requiresFollowup: true },
+            followupResolvedAt: null,
+          },
+        }),
+        tx.shift.count({ where: { endedAt: null } }),
+      ]);
 
-      const byDay = byDayRows.map((r) => ({ date: r.day, count: Number(r.count) }));
+      const byDay = byDayRows.map((r) => ({
+        date: r.day,
+        count: Number(r.count),
+      }));
       const totalReports = byDay.reduce((sum, d) => sum + d.count, 0);
 
       return {

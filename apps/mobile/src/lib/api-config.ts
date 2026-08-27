@@ -1,12 +1,19 @@
 import Constants from 'expo-constants';
 
-// Fase 2: todavía no hay variable de entorno explícita para la URL del
-// API (eso llega con EAS Build en la Fase 8). En desarrollo, Expo expone
-// el host:puerto del bundler en Constants.expoConfig.hostUri (p.ej.
-// "192.168.1.5:8081" cuando se corre `expo start` en la misma red que el
-// dispositivo/Expo Go) -- se reusa esa IP LAN para no tener que
-// hardcodearla ni pedirle al usuario que la configure a mano.
+// Fase 8 (D11): precedencia explícita
+//   EXPO_PUBLIC_API_URL (env)  ->  hostUri (desarrollo)  ->  localhost (último recurso)
+//
+// Un build de producción (EAS Build, Fase 9) no tiene bundler de Metro
+// corriendo -- Constants.expoConfig.hostUri es undefined ahí, y sin esta
+// variable la app caería al fallback de "localhost:3000", conectándose a
+// sí misma. El prefijo EXPO_PUBLIC_ hace que Expo la inyecte en el bundle
+// en build time (ver apps/mobile/.env.example); en desarrollo se deja sin
+// setear y se sigue usando la heurística de hostUri de la Fase 2 (la IP
+// LAN del bundler, para no tener que hardcodearla).
 function resolveApiBaseUrl(): string {
+  const fromEnv = process.env.EXPO_PUBLIC_API_URL;
+  if (fromEnv) return fromEnv;
+
   const hostUri = Constants.expoConfig?.hostUri;
   const host = hostUri?.split(':')[0];
   return host ? `http://${host}:3000` : 'http://localhost:3000';

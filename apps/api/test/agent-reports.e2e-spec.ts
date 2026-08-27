@@ -92,7 +92,11 @@ describe('Flujo del agente: reportes y turnos (e2e)', () => {
   // identidad de staff alcanza para leer.
   const auditReader = { id: 'audit-reader', role: Role.super_admin };
 
-  async function assertAudited(entityType: string, entityId: string, userId: string) {
+  async function assertAudited(
+    entityType: string,
+    entityId: string,
+    userId: string,
+  ) {
     const logs = await prisma.forUser(auditReader).auditLog.findMany({
       where: { entityType, entityId },
       orderBy: { createdAt: 'desc' },
@@ -102,7 +106,9 @@ describe('Flujo del agente: reportes y turnos (e2e)', () => {
   }
 
   it('flujo completo: turno, crear reporte, aislamiento por campaña, edición y ventana', async () => {
-    const { accessToken: agentToken, user: agent } = await login('agent1@callreport.demo');
+    const { accessToken: agentToken, user: agent } = await login(
+      'agent1@callreport.demo',
+    );
     const { accessToken: supervisorToken, user: supervisor } = await login(
       'supervisor@callreport.demo',
     );
@@ -173,7 +179,9 @@ describe('Flujo del agente: reportes y turnos (e2e)', () => {
       .set('Authorization', `Bearer ${supervisorToken}`)
       .expect(200);
     const allCampaigns = allCampaignsRes.body as AdminCampaign[];
-    const unassignedCampaign = allCampaigns.find((c) => !c.agentIds.includes(agent.id));
+    const unassignedCampaign = allCampaigns.find(
+      (c) => !c.agentIds.includes(agent.id),
+    );
     expect(unassignedCampaign).toBeDefined();
 
     await http()
@@ -256,7 +264,10 @@ describe('Flujo del agente: reportes y turnos (e2e)', () => {
     const backdated = new Date(Date.now() - 31 * 60_000);
     await prisma
       .forUser({ id: supervisor.id, role: Role.supervisor })
-      .callReport.update({ where: { id: report.id }, data: { createdAt: backdated } });
+      .callReport.update({
+        where: { id: report.id },
+        data: { createdAt: backdated },
+      });
 
     await http()
       .patch(`/reports/${report.id}`)

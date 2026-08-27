@@ -34,7 +34,11 @@ interface ExportRow {
   followupResolvedAt: Date | null;
 }
 
-function buildFilename(prefix: string, filters: ExportFilters, ext: string): string {
+function buildFilename(
+  prefix: string,
+  filters: ExportFilters,
+  ext: string,
+): string {
   const from = filters.from ? isoDate(filters.from) : 'inicio';
   const to = filters.to ? isoDate(filters.to) : 'hoy';
   const safePrefix = prefix.replace(/[^a-z0-9]+/gi, '_').toLowerCase();
@@ -144,7 +148,9 @@ export class ExportsService {
       if (!aborted) res.end();
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Export CSV falló a mitad de stream (userId=${user.id}): ${message}`);
+      this.logger.error(
+        `Export CSV falló a mitad de stream (userId=${user.id}): ${message}`,
+      );
       // Los headers ya salieron -- no se puede convertir esto en un 4xx/5xx
       // JSON limpio a esta altura. Cortar la conexión es preferible a
       // dejar un archivo CSV truncado que parezca completo con status 200.
@@ -177,17 +183,27 @@ export class ExportsService {
   ): Promise<ExportRow[]> {
     return this.prisma.forUserRaw(user, (tx) => {
       const conditions: Prisma.Sql[] = [];
-      if (filters.from) conditions.push(Prisma.sql`cr.created_at >= ${filters.from}`);
-      if (filters.to) conditions.push(Prisma.sql`cr.created_at <= ${filters.to}`);
-      if (filters.campaignId) conditions.push(Prisma.sql`cr.campaign_id = ${filters.campaignId}`);
+      if (filters.from)
+        conditions.push(Prisma.sql`cr.created_at >= ${filters.from}`);
+      if (filters.to)
+        conditions.push(Prisma.sql`cr.created_at <= ${filters.to}`);
+      if (filters.campaignId)
+        conditions.push(Prisma.sql`cr.campaign_id = ${filters.campaignId}`);
       if (filters.dispositionIds?.length) {
-        conditions.push(Prisma.sql`cr.disposition_id = ANY(${filters.dispositionIds})`);
+        conditions.push(
+          Prisma.sql`cr.disposition_id = ANY(${filters.dispositionIds})`,
+        );
       }
-      if (filters.tenantId) conditions.push(Prisma.sql`cr.tenant_id = ${filters.tenantId}`);
+      if (filters.tenantId)
+        conditions.push(Prisma.sql`cr.tenant_id = ${filters.tenantId}`);
       if (cursor) {
-        conditions.push(Prisma.sql`(cr.created_at, cr.id) < (${cursor.createdAt}, ${cursor.id})`);
+        conditions.push(
+          Prisma.sql`(cr.created_at, cr.id) < (${cursor.createdAt}, ${cursor.id})`,
+        );
       }
-      const where = conditions.length ? Prisma.join(conditions, ' AND ') : Prisma.sql`TRUE`;
+      const where = conditions.length
+        ? Prisma.join(conditions, ' AND ')
+        : Prisma.sql`TRUE`;
 
       return tx.$queryRaw<ExportRow[]>`
         SELECT cr.id, cr.created_at AS "createdAt", t.name AS "tenantName",
@@ -257,6 +273,9 @@ export class ExportsService {
       truncated: page.nextCursor !== null,
     });
 
-    return { buffer, filename: buildFilename(tenantLabel || 'reportes', filters, 'pdf') };
+    return {
+      buffer,
+      filename: buildFilename(tenantLabel || 'reportes', filters, 'pdf'),
+    };
   }
 }

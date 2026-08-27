@@ -66,7 +66,11 @@ describe('Visor de auditoría (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
     );
     await app.init();
     prisma = moduleFixture.get(PrismaService);
@@ -79,19 +83,27 @@ describe('Visor de auditoría (e2e)', () => {
   const http = () => request(app.getHttpServer());
 
   async function login(email: string): Promise<LoginResponse> {
-    const res = await http().post('/auth/login').send({ email, password: PASSWORD }).expect(200);
+    const res = await http()
+      .post('/auth/login')
+      .send({ email, password: PASSWORD })
+      .expect(200);
     return res.body as LoginResponse;
   }
 
   // El seed cruza asignaciones de agentes entre tenants al azar -- mismo
   // criterio que realtime-reports.e2e-spec.ts / followups.e2e-spec.ts.
-  async function clientEmailFor(tenantId: string, supervisorToken: string): Promise<string> {
+  async function clientEmailFor(
+    tenantId: string,
+    supervisorToken: string,
+  ): Promise<string> {
     const tenantRes = await http()
       .get(`/admin/tenants/${tenantId}`)
       .set('Authorization', `Bearer ${supervisorToken}`)
       .expect(200);
     const tenant = tenantRes.body as { name: string };
-    const domain = tenant.name.toLowerCase().includes('acme') ? 'acmecorp' : 'globex';
+    const domain = tenant.name.toLowerCase().includes('acme')
+      ? 'acmecorp'
+      : 'globex';
     return `client1@${domain}.demo`;
   }
 
@@ -157,9 +169,15 @@ describe('Visor de auditoría (e2e)', () => {
   // Verifica el criterio "eventos de todas las fases anteriores".
   describe('Cobertura de fases anteriores + inmutabilidad', () => {
     it('acciones de Fase 3/4/6 aparecen en el visor; UPDATE/DELETE siguen prohibidos', async () => {
-      const { accessToken: agentToken, user: agent } = await login('agent1@callreport.demo');
-      const { accessToken: adminToken, user: admin } = await login('admin@callreport.demo');
-      const { accessToken: supervisorToken } = await login('supervisor@callreport.demo');
+      const { accessToken: agentToken, user: agent } = await login(
+        'agent1@callreport.demo',
+      );
+      const { accessToken: adminToken, user: admin } = await login(
+        'admin@callreport.demo',
+      );
+      const { accessToken: supervisorToken } = await login(
+        'supervisor@callreport.demo',
+      );
 
       await http()
         .post('/agent/shifts/clock-in')
@@ -177,7 +195,9 @@ describe('Visor de auditoría (e2e)', () => {
         .set('Authorization', `Bearer ${agentToken}`)
         .expect(200);
       const dispositions = dispositionsRes.body as Disposition[];
-      const followupDisposition = dispositions.find((d) => d.code === 'seguimiento')!;
+      const followupDisposition = dispositions.find(
+        (d) => d.code === 'seguimiento',
+      )!;
       expect(followupDisposition).toBeDefined();
 
       // Fase 4: create.
@@ -201,7 +221,10 @@ describe('Visor de auditoría (e2e)', () => {
         .expect(200);
 
       // Fase 6: resolve_followup (por un client_user del tenant dueño).
-      const clientEmail = await clientEmailFor(report.tenantId, supervisorToken);
+      const clientEmail = await clientEmailFor(
+        report.tenantId,
+        supervisorToken,
+      );
       const { accessToken: clientToken } = await login(clientEmail);
       await http()
         .post(`/followups/${report.id}/resolve`)
@@ -225,7 +248,11 @@ describe('Visor de auditoría (e2e)', () => {
         (l) => l.entityId === report.id,
       );
       const actionsForReport = reportLogs.map((l) => l.action).sort();
-      expect(actionsForReport).toEqual(['create', 'resolve_followup', 'update']);
+      expect(actionsForReport).toEqual([
+        'create',
+        'resolve_followup',
+        'update',
+      ]);
 
       const tenantLogsRes = await http()
         .get(`/admin/audit-logs?entityType=Tenant&limit=50`)
@@ -254,12 +281,17 @@ describe('Visor de auditoría (e2e)', () => {
       // 'create' de arriba) existe -- si audit_logs_self_insert faltara,
       // el POST /reports habría devuelto 500 (ver el gotcha documentado
       // en audit.interceptor.ts), no habría llegado hasta acá.
-      expect(reportLogs.some((l) => l.action === 'create' && l.userId === agent.id)).toBe(true);
+      expect(
+        reportLogs.some((l) => l.action === 'create' && l.userId === agent.id),
+      ).toBe(true);
 
       // Inmutabilidad: UPDATE/DELETE siguen prohibidos incluso para staff.
       const staffDb = prisma.forUser({ id: admin.id, role: Role.super_admin });
       await expect(
-        staffDb.auditLog.update({ where: { id: tenantLog!.id }, data: { action: 'x' } }),
+        staffDb.auditLog.update({
+          where: { id: tenantLog!.id },
+          data: { action: 'x' },
+        }),
       ).rejects.toThrow();
       await expect(
         staffDb.auditLog.delete({ where: { id: tenantLog!.id } }),
