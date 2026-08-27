@@ -41,6 +41,17 @@ if (-not $databaseUrl) {
     exit 1
 }
 
+# libpq (usado por pg_dump) no entiende "schema=", es una extensión propia
+# del connection string de Prisma -- sacarla antes de pasarle la URL.
+$uriParts = $databaseUrl -split '\?', 2
+if ($uriParts.Count -eq 2) {
+    $query = ($uriParts[1] -split '&') | Where-Object { $_ -notmatch '^schema=' }
+    $databaseUrl = $uriParts[0]
+    if ($query.Count -gt 0) {
+        $databaseUrl += "?" + ($query -join '&')
+    }
+}
+
 if (-not (Get-Command pg_dump -ErrorAction SilentlyContinue)) {
     Write-Error "pg_dump no está en PATH. Instalar client tools de PostgreSQL (version >= la del server de Neon) -- ver README.md."
     exit 1

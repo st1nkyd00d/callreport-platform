@@ -21,6 +21,10 @@ if [[ -z "${DATABASE_URL:-}" ]]; then
   exit 1
 fi
 
+# libpq (usado por pg_dump) no entiende "schema=", es una extensión propia
+# del connection string de Prisma -- sacarla antes de pasarle la URL.
+DATABASE_URL="$(echo "$DATABASE_URL" | sed -E 's/([?&])schema=[^&]*&?/\1/; s/[?&]$//')"
+
 if ! command -v pg_dump >/dev/null 2>&1; then
   echo "pg_dump no está en PATH. Instalar client tools de PostgreSQL (version >= la del server de Neon) -- ver README.md." >&2
   exit 1
