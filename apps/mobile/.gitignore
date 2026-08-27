@@ -7,7 +7,10 @@ node_modules/
 .expo/
 dist/
 web-build/
-expo-env.d.ts
+# expo-env.d.ts NO va acá a proposito: trae `declare module '*.css'` (via
+# `expo/types`), sin el cual `tsc --noEmit` falla en CI (checkout limpio,
+# nunca corrio `expo start` para regenerarlo). Contenido estatico, se
+# commitea tal cual.
 
 # Native
 .kotlin/
