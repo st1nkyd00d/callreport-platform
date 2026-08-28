@@ -72,22 +72,18 @@ se probó de verdad.
       ajustó `app.json` para que coincida (antes decía `callreport`, sin
       guión -- si alguna vez hay que recrear el proyecto en el dashboard,
       usar `call-report` para que `eas init` no vuelva a chocar).
-- [ ] Firebase: [console.firebase.google.com](https://console.firebase.google.com)
-      → crear proyecto → **Agregar app → Android** con package
-      `com.callreport.app` → descargar `google-services.json` → guardarlo en
-      `apps/mobile/google-services.json` (ya referenciado en `app.json`, se
-      commitea sin problema).
-- [ ] En el mismo proyecto de Firebase: **Configuración del proyecto → Cuentas
-      de servicio → Generar nueva clave privada** → guardar el JSON en un
-      lugar fuera del repo (o dentro de `apps/mobile/` con el patrón
-      `*service-account*.json`/`*firebase-adminsdk*.json`, ya excluido en
-      `.gitignore` — **nunca commitear este archivo**, es la clave real).
-- [ ] Subir esa clave a EAS: `npx eas credentials` (desde `apps/mobile/`) →
-      Android → seleccionar el perfil → **Google Service Account** → apuntar
-      al JSON del paso anterior.
-- [ ] Redeploy de `callreport-api` en Render (Manual Deploy → Deploy latest
-      commit) para que tome `PUSH_ENABLED=true` de `render.yaml` (ya
-      cambiado en el repo).
+- [x] Firebase — ✅ 2026-08-29. Proyecto `callreport-5e1e0`, app Android
+      `com.callreport.app` registrada, `google-services.json` copiado a
+      `apps/mobile/` y commiteado (identificadores públicos, sin riesgo).
+- [x] Clave privada (service account) generada y **subida directo a EAS**
+      vía `eas credentials` → Android → perfil `preview` → Google Service
+      Account → Upload → asignada a "Push Notifications (FCM V1)". Nunca
+      tocó el repo. Verificado en la consola de `eas credentials`:
+      `Client Email: firebase-adminsdk-fbsvc@callreport-5e1e0.iam.gserviceaccount.com`.
+- [x] Redeploy de `callreport-api` en Render (Manual Sync) — ✅ 2026-08-29,
+      confirmado con `/health` (uptime ~86s tras el sync, o sea reinició
+      con el `render.yaml` nuevo) y `/health/ready` en verde.
+      `PUSH_ENABLED=true` ya está activo en producción.
 
 ## C. Build descargable
 
