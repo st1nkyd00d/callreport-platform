@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "988308162544",
+    "project_id": "callreport-5e1e0",
+    "storage_bucket": "callreport-5e1e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:988308162544:android:24e54ffa85a8758f40ff35",
+        "android_client_info": {
+          "package_name": "com.callreport.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlHnUFxjtBjz0neh8dqXeXMpJucIYDvjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
