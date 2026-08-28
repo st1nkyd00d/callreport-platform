@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "CallReport",
-    "slug": "callreport",
+    "slug": "call-report",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -48,8 +48,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
-    }
+        "projectId": "80c96878-a1fb-4b53-afd8-629d15465cad"
+      },
+      "router": {}
+    },
+    "owner": "atiliojgodev"
   }
 }

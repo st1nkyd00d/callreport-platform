@@ -65,9 +65,13 @@ se probó de verdad.
 
 ## B. Identidad, EAS y Firebase
 
-- [ ] `npx eas login` (cuenta de Expo, crear una gratis si no tenés).
-- [ ] `npx eas init` desde `apps/mobile/` — confirma que llena
-      `extra.eas.projectId` en `app.json` (hoy vacío).
+- [x] `eas login` (cuenta `atiliojgodev` / atiliojg1@gmail.com) — ✅ 2026-08-29.
+- [x] `eas init --id 80c96878-a1fb-4b53-afd8-629d15465cad` — ✅ 2026-08-29.
+      `extra.eas.projectId` y `owner` ya están en `app.json`. El proyecto
+      creado en el dashboard tenía slug `call-report` (con guión); se
+      ajustó `app.json` para que coincida (antes decía `callreport`, sin
+      guión -- si alguna vez hay que recrear el proyecto en el dashboard,
+      usar `call-report` para que `eas init` no vuelva a chocar).
 - [ ] Firebase: [console.firebase.google.com](https://console.firebase.google.com)
       → crear proyecto → **Agregar app → Android** con package
       `com.callreport.app` → descargar `google-services.json` → guardarlo en
