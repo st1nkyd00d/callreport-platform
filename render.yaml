@@ -82,6 +82,14 @@ services:
       # implica un rebuild del static site, no solo un restart.
       - key: VITE_API_BASE_URL
         value: https://callreport-api.onrender.com
+      # npm ci en la raíz instala TODOS los workspaces, así que dispara el
+      # postinstall (`prisma generate`) de apps/api aunque este servicio
+      # solo builde admin-web. prisma.config.ts usa env('DATABASE_URL'),
+      # que exige que la variable exista (no que sea alcanzable) -- mismo
+      # bug ya visto en los jobs lint/build de ci.yml. Placeholder, no una
+      # URL real.
+      - key: DATABASE_URL
+        value: 'postgresql://placeholder:placeholder@localhost:5432/placeholder'
     routes:
       # SPA: cualquier ruta que no sea un asset real cae en index.html,
       # imprescindible para que React Router maneje el resto del lado
