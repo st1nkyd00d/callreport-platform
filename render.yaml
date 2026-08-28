@@ -56,11 +56,12 @@ services:
         value: '60'
       - key: LOG_LEVEL
         value: info
-      # false hasta que la Fase 9 corra `eas init` (extra.eas.projectId
-      # sigue vacío) -- con push apagado, NotificationsService no intenta
-      # mandar nada, solo lo audita.
+      # Fase 8.5: encendido -- `eas init` ya llenó extra.eas.projectId y hay
+      # credencial FCM V1 subida a EAS (ver PASOS-MANUALES-FASE-8.5.md §B).
+      # Con push apagado, NotificationsService no intentaba mandar nada,
+      # solo lo auditaba; ahora sí manda de verdad vía expo-server-sdk.
       - key: PUSH_ENABLED
-        value: 'false'
+        value: 'true'
       - key: EXPO_ACCESS_TOKEN
         value: ''
       - key: METRICS_TZ

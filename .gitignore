@@ -6,6 +6,12 @@ dist-ssr/
 .env
 .env.local
 
+# Fase 8.5: credencial de service account de Firebase (FCM V1) -- secreta,
+# se sube directo a EAS con `eas credentials`, nunca al repo. El
+# google-services.json (identificadores públicos) SÍ se commitea.
+apps/mobile/*service-account*.json
+apps/mobile/*firebase-adminsdk*.json
+
 logs
 *.log
 npm-debug.log*
