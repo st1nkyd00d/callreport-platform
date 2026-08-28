@@ -1,0 +1,9 @@
+# Fase 8.5: EAS Build sube todo el directorio de trabajo (no solo lo
+# versionado en git) al armar el tarball del proyecto. apps/api/.claude/
+# skills/* son symlinks de Windows creados localmente por una herramienta
+# de IA (no son parte de la app ni están en git) que apuntan a
+# apps/api/.agents/skills/*; recrearlos en el tarball temporal falla con
+# EPERM en Windows sin permisos de administrador/Developer Mode. Ninguna
+# de las dos carpetas hace falta para compilar la app.
+.claude/
+.agents/
