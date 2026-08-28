@@ -20,7 +20,9 @@ services:
     type: web
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build --workspace apps/api
+    # --include=dev es necesario: NODE_ENV=production (abajo) hace que
+    # npm ci salte devDependencies, y @nestjs/cli (comando `nest`) vive ahí.
+    buildCommand: npm ci --include=dev && npm run build --workspace apps/api
     startCommand: npm run start:prod --workspace apps/api
     healthCheckPath: /health
     envVars:
@@ -69,7 +71,9 @@ services:
   - name: callreport-admin
     type: web
     runtime: static
-    buildCommand: npm ci && npm run build --workspace apps/admin-web
+    # --include=dev por si Render también inyecta NODE_ENV=production acá
+    # (vite es devDependency, mismo problema que en callreport-api).
+    buildCommand: npm ci --include=dev && npm run build --workspace apps/admin-web
     staticPublishPath: apps/admin-web/dist
     envVars:
       # Mismo caveat que CORS_ORIGINS de arriba: deterministo a partir del
