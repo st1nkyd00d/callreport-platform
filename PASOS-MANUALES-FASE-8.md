@@ -168,7 +168,16 @@ arme connection strings a mano):
 
 ---
 
-## 4. Desplegar en Render
+## 4. Desplegar en Render — EN CURSO, con plan `free` temporal (2026-08-29)
+
+**Nota de esta sesión**: Render pide tarjeta incluso para Blueprint por el
+`plan: starter` de `callreport-api`. Decisión: bajar temporalmente a
+`plan: free` en `render.yaml` para desplegar sin cargar tarjeta todavía y
+validar que el deploy funciona de punta a punta. Con `free`, el servicio
+se duerme por inactividad y corta los sockets de Socket.io en tiempo real
+(chat/notificaciones live) — **no sirve para producción real así**, solo
+para probar. Antes de dar este paso (y la Fase 8) por cerrado del todo,
+volver a `plan: starter` en `render.yaml`, cargar la tarjeta y redeployar.
 
 1. Crear una cuenta en [Render](https://render.com) si no tenés una.
 2. **New → Blueprint**, conectar el repo de GitHub (paso 1). Render lee
@@ -181,9 +190,10 @@ arme connection strings a mano):
      distinto al de desarrollo y al de CI — recomendado).
    - `APP_DATABASE_URL` → ídem, endpoint pooled.
    - `JWT_ACCESS_SECRET` se genera solo (`generateValue: true`).
-4. **Elegir plan pago** ("Starter" o superior) para `callreport-api` — el
-   free tier duerme el servicio por inactividad y mata los sockets de
-   Socket.io. `callreport-admin` (static site) no necesita plan pago.
+4. ~~**Elegir plan pago** ("Starter" o superior) para `callreport-api`~~ —
+   **pendiente, usando `free` por ahora** (ver nota arriba). El free tier
+   duerme el servicio por inactividad y mata los sockets de Socket.io.
+   `callreport-admin` (static site) no necesita plan pago en ningún caso.
 5. Antes del primer deploy real, correr las migraciones contra la base de
    producción **una vez** desde tu máquina:
    ```bash

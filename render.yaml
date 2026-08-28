@@ -4,15 +4,22 @@
 # una -- ver README.md "Despliegue" para el detalle completo y los pasos
 # manuales que quedan (secrets, plan pago, dominio final).
 #
-# Nota sobre plan: "starter" (pago) es deliberado, no un default -- el
-# free tier de Render duerme el servicio por inactividad, lo que mata
-# todos los sockets de Socket.io abiertos y retrasa el push. Ver D10 en
-# plan-fase-8.md.
+# Nota sobre plan: "starter" (pago) es la elección deliberada para
+# producción real -- el free tier de Render duerme el servicio por
+# inactividad, lo que mata todos los sockets de Socket.io abiertos y
+# retrasa el push. Ver D10 en plan-fase-8.md.
+#
+# TEMPORAL (2026-08-29): bajado a "free" para poder desplegar sin cargar
+# tarjeta todavía. Con esto el servicio se va a dormir por inactividad y
+# cortar los sockets en tiempo real -- NO usar así para producción real,
+# solo para validar que el deploy funciona de punta a punta. Volver a
+# "starter" antes de dar la Fase 8 por cerrada (ver PASOS-MANUALES-FASE-8.md
+# §4).
 services:
   - name: callreport-api
     type: web
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm ci && npm run build --workspace apps/api
     startCommand: npm run start:prod --workspace apps/api
     healthCheckPath: /health
